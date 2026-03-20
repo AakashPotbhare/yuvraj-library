@@ -146,8 +146,11 @@ def _parse_pg_url(url):
 def get_db() -> _DB:
     if "db" not in g:
         if _IS_PG:
-            import psycopg2
-            conn = psycopg2.connect(**_parse_pg_url(_DATABASE_URL))
+            import psycopg2, logging
+            params = _parse_pg_url(_DATABASE_URL)
+            safe = {k: v for k, v in params.items() if k != "password"}
+            logging.warning(f"PG connect params (no password): {safe}")
+            conn = psycopg2.connect(**params)
             g.db = _DB(conn, is_pg=True)
         else:
             conn = sqlite3.connect(current_app.config["DATABASE"])
