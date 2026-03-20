@@ -115,6 +115,22 @@ def _parse_pg_url(url):
         password = unquote(credentials[colon + 1:])
     else:
         user, password = unquote(credentials), ""
+    # Supabase direct-connection hosts (db.<ref>.supabase.co) resolve to IPv6
+    # which Vercel serverless cannot reach.  Rewrite to the IPv4 pooler
+    # (session mode, port 5432) automatically so users don't need to change
+    # their DATABASE_URL.
+    import re
+    direct_match = re.match(r"db\.([^.]+)\.supabase\.co", host)
+    if direct_match:
+        project_ref = direct_match.group(1)
+        # Pooler host is region-specific; fall back to ap-south-1 if unknown
+        region = os.environ.get("SUPABASE_REGION", "ap-south-1")
+        host = f"aws-0-{region}.pooler.supabase.com"
+        port = 5432
+        # Pooler requires username format postgres.<project_ref>
+        if "." not in user:
+            user = f"{user}.{project_ref}"
+
     params = {"host": host, "port": port, "user": user, "password": password,
               "dbname": dbname or "postgres", "sslmode": "require",
               "connect_timeout": 10}
