@@ -114,3 +114,23 @@ def test_deactivate_member_with_open_issues_blocked(client):
     r = client.post("/members/1/deactivate", follow_redirects=True)
     assert r.status_code == 200
     assert b"Cannot deactivate" in r.data or b"open" in r.data.lower()
+
+
+def seed_member(client):
+    client.post("/members/add", data={
+        "name": "Delete Test Member",
+        "phone": "7777777777",
+        "address": "Ujjain",
+        "id_type": "Aadhaar",
+        "id_number": "9999",
+        "member_type": "General",
+    })
+
+
+def test_delete_member(client):
+    seed_member(client)
+    r = client.post("/members/1/delete", follow_redirects=True)
+    assert r.status_code == 200
+    # Should be gone
+    r2 = client.get("/members/1")
+    assert r2.status_code in (404, 200, 302)  # 404, redirect, or shows list

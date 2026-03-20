@@ -20,7 +20,14 @@
             <td>{{ i['issued_on'] }}</td>
             <td>{{ i['due_date'] }}</td>
             <td>{% if i['returned_on'] %}{{ i['returned_on'] }}{% else %}<span class="badge bg-warning text-dark">Not returned</span>{% endif %}</td>
-            <td>{{ i['reissue_count'] }}</td>
+            <td>{{ i['reissue_count'] }}
+                {% if i['returned_on'] %}
+                <form method="post" action="{{ url_for('issues.delete_issue', id=i['id']) }}" class="d-inline ms-1">
+                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                        onclick="return confirm('Delete this issue record?')">Delete</button>
+                </form>
+                {% endif %}
+            </td>
         </tr>
         {% endfor %}
     </tbody>

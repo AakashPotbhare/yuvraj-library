@@ -206,3 +206,20 @@ def reissue_book(id):
     db.commit()
     flash(f"Book reissued. New due date: {new_due}", "success")
     return redirect(url_for("issues.list_issues"))
+
+
+@bp.route("/<int:id>/delete", methods=["POST"])
+@login_required
+def delete_issue(id):
+    db = get_db()
+    issue = db.execute("SELECT * FROM issues WHERE id=?", (id,)).fetchone()
+    if not issue:
+        flash("Issue not found.", "danger")
+        return redirect(url_for("issues.history"))
+    if issue["returned_on"] is None:
+        flash("Cannot delete an active issue. Return the book first.", "danger")
+        return redirect(url_for("issues.list_issues"))
+    db.execute("DELETE FROM issues WHERE id=?", (id,))
+    db.commit()
+    flash("Issue record deleted.", "success")
+    return redirect(url_for("issues.history"))

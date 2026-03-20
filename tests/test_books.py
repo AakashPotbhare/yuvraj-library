@@ -72,3 +72,18 @@ def test_edit_book(client):
     }, follow_redirects=True)
     assert r.status_code == 200
     assert b"New Title" in r.data
+
+
+def seed_book(client):
+    client.post("/books/add", data={
+        "title": "Delete Test Book",
+        "author": "Delete Author",
+        "category": "Fiction",
+        "total_copies": "1",
+    })
+
+
+def test_delete_book(client):
+    seed_book(client)
+    r = client.post("/books/1/delete", follow_redirects=True)
+    assert r.status_code == 200

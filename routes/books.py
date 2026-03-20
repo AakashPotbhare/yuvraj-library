@@ -150,3 +150,28 @@ def edit_book(id):
         return redirect(url_for("books.view_book", id=id))
     form_data = {k: ('' if v is None else v) for k, v in dict(book).items()}
     return render_template("books/edit.html", book=book, form=form_data, categories=CATEGORIES)
+
+@bp.route("/<int:id>/deactivate", methods=["POST"])
+@login_required
+def deactivate_book(id):
+    db = get_db()
+    db.execute("UPDATE books SET is_active=0 WHERE id=?", (id,))
+    db.commit()
+    flash("Book deactivated.", "success")
+    return redirect(url_for("books.view_book", id=id))
+
+@bp.route("/<int:id>/delete", methods=["POST"])
+@login_required
+def delete_book(id):
+    db = get_db()
+    active = db.execute(
+        "SELECT COUNT(*) AS n FROM issues WHERE book_id=? AND returned_on IS NULL", (id,)
+    ).fetchone()["n"]
+    if active and int(active) > 0:
+        flash(f"Cannot delete: book has {active} active issue(s). Return them first.", "danger")
+        return redirect(url_for("books.view_book", id=id))
+    db.execute("DELETE FROM issues WHERE book_id=?", (id,))
+    db.execute("DELETE FROM books WHERE id=?", (id,))
+    db.commit()
+    flash("Book deleted permanently.", "success")
+    return redirect(url_for("books.list_books"))

@@ -214,3 +214,21 @@ def deactivate_member(id):
     db.commit()
     flash("Member deactivated.", "warning")
     return redirect(url_for("members.list_members"))
+
+
+@bp.route("/<int:id>/delete", methods=["POST"])
+@login_required
+def delete_member(id):
+    db = get_db()
+    # Block delete if member has active issues
+    active = db.execute(
+        "SELECT COUNT(*) AS n FROM issues WHERE member_id=? AND returned_on IS NULL", (id,)
+    ).fetchone()["n"]
+    if active and int(active) > 0:
+        flash(f"Cannot delete: member has {active} book(s) currently issued. Return them first.", "danger")
+        return redirect(url_for("members.view_member", id=id))
+    db.execute("DELETE FROM issues WHERE member_id=?", (id,))
+    db.execute("DELETE FROM members WHERE id=?", (id,))
+    db.commit()
+    flash("Member deleted permanently.", "success")
+    return redirect(url_for("members.list_members"))
