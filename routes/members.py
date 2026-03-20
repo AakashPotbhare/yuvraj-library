@@ -43,12 +43,12 @@ def add_member():
             flash(error, "danger")
             return render_template("members/add.html", form=request.form)
         db = get_db()
-        db.execute(
+        cursor = db.execute(
             "INSERT INTO members (name, phone, address, id_type, id_number, member_type) VALUES (?,?,?,?,?,?)",
             (name, phone, address, id_type, id_number, member_type)
         )
         db.commit()
-        member_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+        member_id = cursor.lastrowid
         flash(f"Member '{name}' added successfully.", "success")
         return redirect(url_for("members.view_member", id=member_id))
     return render_template("members/add.html", form={})
@@ -72,7 +72,7 @@ def view_member(id):
         "members/view.html",
         member=member,
         open_issues=open_issues,
-        today=date.today().isoformat()
+        today=date.today()
     )
 
 
@@ -95,9 +95,13 @@ def edit_member(id):
             error = "Name is required."
         elif not phone:
             error = "Phone is required."
+        elif not address:
+            error = "Address is required."
+        elif not id_number:
+            error = "ID number is required."
         if error:
             flash(error, "danger")
-            return render_template("members/edit.html", member=member, form=request.form)
+            return render_template("members/edit.html", member=member, form=dict(request.form))
         db.execute(
             "UPDATE members SET name=?, phone=?, address=?, id_type=?, id_number=?, member_type=? WHERE id=?",
             (name, phone, address, id_type, id_number, member_type, id)
@@ -105,12 +109,17 @@ def edit_member(id):
         db.commit()
         flash("Member updated successfully.", "success")
         return redirect(url_for("members.view_member", id=id))
-    return render_template("members/edit.html", member=member, form=member)
+    form_data = dict(member)
+    return render_template("members/edit.html", member=member, form=form_data)
 
 
 @bp.route("/<int:id>/deactivate", methods=["POST"])
 def deactivate_member(id):
     db = get_db()
+    member = db.execute("SELECT id FROM members WHERE id=?", (id,)).fetchone()
+    if member is None:
+        flash("Member not found.", "danger")
+        return redirect(url_for("members.list_members"))
     open_issues = db.execute(
         "SELECT COUNT(*) as cnt FROM issues WHERE member_id=? AND returned_on IS NULL", (id,)
     ).fetchone()["cnt"]

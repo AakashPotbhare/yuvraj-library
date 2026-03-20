@@ -85,3 +85,32 @@ def test_deactivate_member_no_open_issues(client):
     })
     r = client.post("/members/1/deactivate", follow_redirects=True)
     assert r.status_code == 200
+
+
+def test_deactivate_member_with_open_issues_blocked(client):
+    """Deactivating a member with open issues should be blocked."""
+    # Add member
+    client.post("/members/add", data={
+        "name": "Test User",
+        "phone": "8888888888",
+        "address": "Ujjain",
+        "id_type": "Aadhaar",
+        "id_number": "5555",
+        "member_type": "General",
+    })
+    # Add book
+    from database import get_db
+    with client.application.app_context():
+        db = get_db()
+        db.execute(
+            "INSERT INTO books (title, author, category, total_copies) VALUES ('Test Book','Author','Fiction',1)"
+        )
+        # Create an open issue for this member
+        db.execute(
+            "INSERT INTO issues (book_id, member_id, issued_on, due_date) VALUES (1,1,date('now'),date('now','+15 days'))"
+        )
+        db.commit()
+    # Try to deactivate — should be blocked
+    r = client.post("/members/1/deactivate", follow_redirects=True)
+    assert r.status_code == 200
+    assert b"Cannot deactivate" in r.data or b"open" in r.data.lower()

@@ -41,7 +41,7 @@
     </div>
     <div class="mb-3">
         <label class="form-label">Notes (optional)</label>
-        <textarea name="notes" class="form-control" rows="2">{{ form['notes'] or '' }}</textarea>
+        <textarea name="notes" class="form-control" rows="2">{{ form.get('notes', '') }}</textarea>
     </div>
     <button type="submit" class="btn btn-primary">Update Member</button>
     <a href="/members/{{ member['id'] }}" class="btn btn-outline-secondary ms-2">Cancel</a>
