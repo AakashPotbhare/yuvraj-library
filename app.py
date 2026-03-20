@@ -13,6 +13,9 @@ def create_app(test_config=None):
         app.config.update(test_config)
     init_app(app)
 
+    from routes import dashboard
+    app.register_blueprint(dashboard.bp)
+
     from routes import members
     app.register_blueprint(members.bp)
 
