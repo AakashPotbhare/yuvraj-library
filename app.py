@@ -12,6 +12,10 @@ def create_app(test_config=None):
     if test_config:
         app.config.update(test_config)
     init_app(app)
+
+    from routes import members
+    app.register_blueprint(members.bp)
+
     return app
 
 

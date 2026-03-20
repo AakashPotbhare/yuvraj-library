@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ member['name'] }} — Yuvraj Library{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>{{ member['name'] }}</h2>
+    <div>
+        <a href="/members/{{ member['id'] }}/edit" class="btn btn-outline-secondary">Edit</a>
+        {% if member['is_active'] %}
+        <form method="post" action="/members/{{ member['id'] }}/deactivate" class="d-inline">
+            <button type="submit" class="btn btn-outline-danger ms-2"
+                onclick="return confirm('Deactivate this member?')">Deactivate</button>
+        </form>
+        {% else %}
+        <span class="badge bg-secondary ms-2">Inactive</span>
+        {% endif %}
+    </div>
+</div>
+<table class="table table-bordered" style="max-width: 600px;">
+    <tr><th>Phone</th><td>{{ member['phone'] }}</td></tr>
+    <tr><th>Address</th><td>{{ member['address'] }}</td></tr>
+    <tr><th>ID</th><td>{{ member['id_type'] }}: {{ member['id_number'] }}</td></tr>
+    <tr><th>Type</th><td>{{ member['member_type'] }}</td></tr>
+    <tr><th>Joined</th><td>{{ member['joined_on'] }}</td></tr>
+    {% if member['notes'] %}<tr><th>Notes</th><td>{{ member['notes'] }}</td></tr>{% endif %}
+</table>
+
+{% if open_issues %}
+<h4 class="mt-4">Currently Borrowed Books</h4>
+<table class="table table-bordered">
+    <thead class="table-dark">
+        <tr><th>Book</th><th>Rack</th><th>Issued On</th><th>Due Date</th><th>Reissues</th></tr>
+    </thead>
+    <tbody>
+        {% for issue in open_issues %}
+        <tr {% if issue['due_date'] < today %}class="table-danger"{% endif %}>
+            <td>{{ issue['title'] }} <small class="text-muted">by {{ issue['author'] }}</small></td>
+            <td>{{ issue['rack_location'] or '-' }}</td>
+            <td>{{ issue['issued_on'] }}</td>
+            <td>{{ issue['due_date'] }}</td>
+            <td>{{ issue['reissue_count'] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="text-muted mt-3">No books currently borrowed.</p>
+{% endif %}
+
+<a href="/members" class="btn btn-outline-secondary mt-3">&#8592; Back to Members</a>
+{% endblock %}

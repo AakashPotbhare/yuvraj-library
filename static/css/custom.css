@@ -1,0 +1,7 @@
+body { font-size: 18px; line-height: 1.6; }
+.btn { font-size: 1.1rem; padding: 0.6rem 1.4rem; min-width: 100px; }
+.form-label { font-weight: 600; margin-top: 0.75rem; }
+.form-control, .form-select { font-size: 1.1rem; padding: 0.6rem; }
+.table td, .table th { font-size: 1rem; padding: 0.85rem 1rem; vertical-align: middle; }
+.navbar-brand { font-size: 1.4rem; font-weight: bold; }
+.form-hint { font-size: 0.85rem; color: #6c757d; margin-top: 2px; }

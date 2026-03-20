@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Edit Member — Yuvraj Library{% endblock %}
+{% block content %}
+<h2>Edit Member</h2>
+<form method="post" class="mt-3" style="max-width: 600px;">
+    <div class="mb-3">
+        <label class="form-label">Full Name *</label>
+        <div class="form-hint">सदस्य का नाम</div>
+        <input type="text" name="name" class="form-control" value="{{ form['name'] }}" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Phone Number *</label>
+        <div class="form-hint">फोन नंबर</div>
+        <input type="text" name="phone" class="form-control" value="{{ form['phone'] }}" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Address *</label>
+        <div class="form-hint">पता</div>
+        <textarea name="address" class="form-control" rows="2" required>{{ form['address'] }}</textarea>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Government ID Type *</label>
+        <div class="form-hint">सरकारी पहचान पत्र</div>
+        <select name="id_type" class="form-select">
+            {% for opt in ['Aadhaar', 'Voter ID', 'PAN', 'Passport', 'Other'] %}
+            <option value="{{ opt }}" {% if form['id_type'] == opt %}selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">ID Number *</label>
+        <input type="text" name="id_number" class="form-control" value="{{ form['id_number'] }}" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Member Type</label>
+        <select name="member_type" class="form-select">
+            {% for opt in ['General', 'Student', 'Professional', 'Senior Citizen'] %}
+            <option value="{{ opt }}" {% if form['member_type'] == opt %}selected{% endif %}>{{ opt }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Notes (optional)</label>
+        <textarea name="notes" class="form-control" rows="2">{{ form['notes'] or '' }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Update Member</button>
+    <a href="/members/{{ member['id'] }}" class="btn btn-outline-secondary ms-2">Cancel</a>
+</form>
+{% endblock %}
