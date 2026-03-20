@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Issue History — Yuvraj Library{% endblock %}
+{% block content %}
+<h2>Issue History</h2>
+<form method="get" class="mb-3 d-flex gap-2" style="max-width: 500px;">
+    <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Search by book title or member name...">
+    <button type="submit" class="btn btn-outline-secondary">Search</button>
+    {% if q %}<a href="/issues/history" class="btn btn-outline-danger">Clear</a>{% endif %}
+</form>
+{% if issues %}
+<table class="table table-bordered table-sm">
+    <thead class="table-dark">
+        <tr><th>Book</th><th>Member</th><th>Issued</th><th>Due</th><th>Returned</th><th>Reissues</th></tr>
+    </thead>
+    <tbody>
+        {% for i in issues %}
+        <tr {% if not i['returned_on'] and i['due_date'] < today %}class="table-warning"{% endif %}>
+            <td>{{ i['title'] }}</td>
+            <td>{{ i['member_name'] }}</td>
+            <td>{{ i['issued_on'] }}</td>
+            <td>{{ i['due_date'] }}</td>
+            <td>{% if i['returned_on'] %}{{ i['returned_on'] }}{% else %}<span class="badge bg-warning text-dark">Not returned</span>{% endif %}</td>
+            <td>{{ i['reissue_count'] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="text-muted">No issue records found{% if q %} for "{{ q }}"{% endif %}.</p>
+{% endif %}
+<a href="/issues" class="btn btn-outline-secondary mt-3">← Back to Active Issues</a>
+{% endblock %}

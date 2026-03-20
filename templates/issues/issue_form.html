@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Issue a Book — Yuvraj Library{% endblock %}
+{% block content %}
+<h2>Issue a Book</h2>
+<p class="text-muted">Step 1: Search for the member and book. Step 2: Confirm the issue.</p>
+
+<div class="row mt-3">
+    <!-- Member search -->
+    <div class="col-md-6 mb-4">
+        <h5>Find Member</h5>
+        <div class="form-hint mb-2">सदस्य खोजें</div>
+        <form method="get" class="d-flex gap-2 mb-3">
+            <input type="hidden" name="book_q" value="{{ book_q }}">
+            <input type="hidden" name="book_id" value="{{ selected_book_id }}">
+            <input type="text" name="member_q" value="{{ member_q }}" class="form-control" placeholder="Name or phone...">
+            <button type="submit" class="btn btn-outline-secondary">Search</button>
+        </form>
+        {% if members_found %}
+        <div class="list-group">
+            {% for m in members_found %}
+            <a href="?member_q={{ member_q }}&book_q={{ book_q }}&member_id={{ m['id'] }}&book_id={{ selected_book_id }}"
+               class="list-group-item list-group-item-action {% if selected_member_id == m['id']|string %}active{% endif %}">
+                <strong>{{ m['name'] }}</strong> — {{ m['phone'] }} <span class="badge bg-secondary">{{ m['member_type'] }}</span>
+            </a>
+            {% endfor %}
+        </div>
+        {% elif member_q %}
+        <p class="text-muted">No members found for "{{ member_q }}".</p>
+        {% endif %}
+        {% if selected_member_id %}
+        <div class="alert alert-success mt-2">Member selected (ID: {{ selected_member_id }})</div>
+        {% endif %}
+    </div>
+
+    <!-- Book search -->
+    <div class="col-md-6 mb-4">
+        <h5>Find Book</h5>
+        <div class="form-hint mb-2">पुस्तक खोजें</div>
+        <form method="get" class="d-flex gap-2 mb-3">
+            <input type="hidden" name="member_q" value="{{ member_q }}">
+            <input type="hidden" name="member_id" value="{{ selected_member_id }}">
+            <input type="text" name="book_q" value="{{ book_q }}" class="form-control" placeholder="Title or author...">
+            <button type="submit" class="btn btn-outline-secondary">Search</button>
+        </form>
+        {% if books_found %}
+        <div class="list-group">
+            {% for b in books_found %}
+            {% if b['available_copies'] > 0 %}
+            <a href="?member_q={{ member_q }}&book_q={{ book_q }}&member_id={{ selected_member_id }}&book_id={{ b['id'] }}"
+               class="list-group-item list-group-item-action {% if selected_book_id == b['id']|string %}active{% endif %}">
+                <strong>{{ b['title'] }}</strong> — {{ b['author'] }}
+                <span class="badge bg-success ms-1">{{ b['available_copies'] }} available</span>
+            </a>
+            {% else %}
+            <div class="list-group-item list-group-item-secondary">
+                {{ b['title'] }} — {{ b['author'] }}
+                <span class="badge bg-danger ms-1">No copies available</span>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+        {% elif book_q %}
+        <p class="text-muted">No books found for "{{ book_q }}".</p>
+        {% endif %}
+        {% if selected_book_id %}
+        <div class="alert alert-success mt-2">Book selected (ID: {{ selected_book_id }})</div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Confirmation form -->
+{% if selected_member_id and selected_book_id %}
+<hr>
+<h5>Step 2: Confirm Issue</h5>
+<div class="alert alert-info">
+    Issuing this book will set the due date to <strong>{{ default_loan_days }} days</strong> from today.
+</div>
+<form method="post" action="/issues/new">
+    <input type="hidden" name="member_id" value="{{ selected_member_id }}">
+    <input type="hidden" name="book_id" value="{{ selected_book_id }}">
+    <button type="submit" class="btn btn-primary btn-lg">Confirm Issue</button>
+    <a href="/issues/new" class="btn btn-outline-secondary ms-2">Cancel</a>
+</form>
+{% endif %}
+
+<div class="mt-4">
+    <a href="/issues" class="btn btn-outline-secondary">← Back to Issues</a>
+</div>
+{% endblock %}
