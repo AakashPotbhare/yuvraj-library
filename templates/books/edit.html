@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Edit Book — Yuvraj Library{% endblock %}
+{% block content %}
+<h2>Edit Book</h2>
+<form method="post" class="mt-3" style="max-width: 600px;">
+    <div class="mb-3">
+        <label class="form-label">Book Title *</label>
+        <div class="form-hint">पुस्तक का नाम</div>
+        <input type="text" name="title" class="form-control" value="{{ form.get('title', '') }}" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Author *</label>
+        <div class="form-hint">लेखक</div>
+        <input type="text" name="author" class="form-control" value="{{ form.get('author', '') }}" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Category *</label>
+        <select name="category" class="form-select">
+            {% for cat in categories %}
+            <option value="{{ cat }}" {% if form.get('category') == cat %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Rack / Shelf Location</label>
+        <div class="form-hint">रैक / शेल्फ</div>
+        <input type="text" name="rack_location" class="form-control" value="{{ form.get('rack_location', '') }}">
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Number of Copies</label>
+        <input type="number" name="total_copies" class="form-control" value="{{ form.get('total_copies', '1') }}" min="1" style="width: 120px;">
+    </div>
+    <div class="mb-3">
+        <label class="form-label">ISBN (optional)</label>
+        <input type="text" name="isbn" class="form-control" value="{{ form.get('isbn', '') }}">
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Publisher (optional)</label>
+        <input type="text" name="publisher" class="form-control" value="{{ form.get('publisher', '') }}">
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Year (optional)</label>
+        <input type="number" name="year" class="form-control" value="{{ form.get('year', '') }}" style="width: 140px;">
+    </div>
+    <button type="submit" class="btn btn-primary">Update Book</button>
+    <a href="/books/{{ book['id'] }}" class="btn btn-outline-secondary ms-2">Cancel</a>
+</form>
+{% endblock %}

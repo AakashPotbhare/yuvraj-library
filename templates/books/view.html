@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ book['title'] }} — Yuvraj Library{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>{{ book['title'] }}</h2>
+    <a href="/books/{{ book['id'] }}/edit" class="btn btn-outline-secondary">Edit</a>
+</div>
+<table class="table table-bordered" style="max-width: 600px;">
+    <tr><th>Author</th><td>{{ book['author'] }}</td></tr>
+    <tr><th>Category</th><td>{{ book['category'] }}</td></tr>
+    <tr><th>Location</th><td>{{ book['rack_location'] or '—' }}</td></tr>
+    <tr><th>Total Copies</th><td>{{ book['total_copies'] }}</td></tr>
+    <tr><th>Available Now</th><td>
+        {% if book['available_copies'] == 0 %}
+            <span class="badge bg-danger fs-6">0 — All copies issued</span>
+        {% else %}
+            <span class="badge bg-success fs-6">{{ book['available_copies'] }}</span>
+        {% endif %}
+    </td></tr>
+    {% if book['isbn'] %}<tr><th>ISBN</th><td>{{ book['isbn'] }}</td></tr>{% endif %}
+    {% if book['publisher'] %}<tr><th>Publisher</th><td>{{ book['publisher'] }}</td></tr>{% endif %}
+    {% if book['year'] %}<tr><th>Year</th><td>{{ book['year'] }}</td></tr>{% endif %}
+</table>
+
+{% if current_holders %}
+<h4 class="mt-4">Currently Issued To</h4>
+<table class="table table-bordered">
+    <thead class="table-dark">
+        <tr><th>Member</th><th>Phone</th><th>Issued On</th><th>Due Date</th></tr>
+    </thead>
+    <tbody>
+        {% for h in current_holders %}
+        <tr {% if h['due_date'] < today %}class="table-danger"{% endif %}>
+            <td><a href="/members/{{ h['member_id'] }}">{{ h['member_name'] }}</a></td>
+            <td>{{ h['phone'] }}</td>
+            <td>{{ h['issued_on'] }}</td>
+            <td>{{ h['due_date'] }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+<a href="/books" class="btn btn-outline-secondary mt-3">← Back to Books</a>
+{% endblock %}
