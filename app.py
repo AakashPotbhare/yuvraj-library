@@ -50,6 +50,12 @@ def create_app(test_config=None):
     app.register_blueprint(books.bp)
     app.register_blueprint(issues.bp)
 
+    @app.errorhandler(Exception)
+    def handle_exception(e):
+        import traceback, logging
+        logging.error(f"Unhandled exception: {traceback.format_exc()}")
+        return f"<h2>Internal Error</h2><pre>{traceback.format_exc()}</pre>", 500
+
     return app
 
 

@@ -84,7 +84,12 @@ def get_db() -> _DB:
     if "db" not in g:
         if _IS_PG:
             import psycopg2
-            conn = psycopg2.connect(_DATABASE_URL, connect_timeout=10)
+            # Supabase requires SSL — ensure sslmode=require is in the URL
+            db_url = _DATABASE_URL
+            if "sslmode" not in db_url:
+                sep = "&" if "?" in db_url else "?"
+                db_url = db_url + sep + "sslmode=require"
+            conn = psycopg2.connect(db_url, connect_timeout=10)
             g.db = _DB(conn, is_pg=True)
         else:
             conn = sqlite3.connect(current_app.config["DATABASE"])
