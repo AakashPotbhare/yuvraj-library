@@ -80,16 +80,58 @@ class _DB:
         self._conn.close()
 
 
+def _parse_pg_url(url):
+    """Parse a PostgreSQL URL robustly, handling @ in passwords.
+
+    Standard urlparse fails when the password contains an unencoded '@'.
+    We find the LAST '@' before the host to correctly split credentials.
+    """
+    from urllib.parse import unquote
+    # Strip scheme
+    rest = url.split("://", 1)[1]
+    # Split off query string
+    rest, _, query = rest.partition("?")
+    # Split off path (dbname)
+    if "/" in rest:
+        rest, _, dbname = rest.partition("/")
+    else:
+        dbname = "postgres"
+    # Split credentials from host using LAST '@'
+    at = rest.rfind("@")
+    if at != -1:
+        credentials, host_port = rest[:at], rest[at + 1:]
+    else:
+        credentials, host_port = "", rest
+    # Parse host:port
+    if ":" in host_port:
+        host, port_str = host_port.rsplit(":", 1)
+        port = int(port_str) if port_str.isdigit() else 5432
+    else:
+        host, port = host_port, 5432
+    # Parse user:password (split on FIRST ':' only)
+    colon = credentials.find(":")
+    if colon != -1:
+        user = unquote(credentials[:colon])
+        password = unquote(credentials[colon + 1:])
+    else:
+        user, password = unquote(credentials), ""
+    params = {"host": host, "port": port, "user": user, "password": password,
+              "dbname": dbname or "postgres", "sslmode": "require",
+              "connect_timeout": 10}
+    # Merge any extra query params (e.g. pgbouncer=true)
+    if query:
+        for part in query.split("&"):
+            k, _, v = part.partition("=")
+            if k and k not in params:
+                params[k] = v
+    return params
+
+
 def get_db() -> _DB:
     if "db" not in g:
         if _IS_PG:
             import psycopg2
-            # Supabase requires SSL — ensure sslmode=require is in the URL
-            db_url = _DATABASE_URL
-            if "sslmode" not in db_url:
-                sep = "&" if "?" in db_url else "?"
-                db_url = db_url + sep + "sslmode=require"
-            conn = psycopg2.connect(db_url, connect_timeout=10)
+            conn = psycopg2.connect(**_parse_pg_url(_DATABASE_URL))
             g.db = _DB(conn, is_pg=True)
         else:
             conn = sqlite3.connect(current_app.config["DATABASE"])
