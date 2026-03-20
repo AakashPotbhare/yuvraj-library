@@ -1,7 +1,73 @@
-body { font-size: 18px; line-height: 1.6; }
-.btn { font-size: 1.1rem; padding: 0.6rem 1.4rem; min-width: 100px; }
-.form-label { font-weight: 600; margin-top: 0.75rem; }
-.form-control, .form-select { font-size: 1.1rem; padding: 0.6rem; }
-.table td, .table th { font-size: 1rem; padding: 0.85rem 1rem; vertical-align: middle; }
-.navbar-brand { font-size: 1.4rem; font-weight: bold; }
-.form-hint { font-size: 0.85rem; color: #6c757d; margin-top: 2px; }
+/* Yuvraj Library — Accessibility styles for elderly staff */
+body {
+    font-size: 18px;
+    line-height: 1.6;
+}
+
+/* Larger buttons */
+.btn {
+    font-size: 1.1rem;
+    padding: 0.6rem 1.4rem;
+    min-width: 100px;
+}
+
+/* Larger form labels */
+.form-label {
+    font-weight: 600;
+    margin-top: 0.75rem;
+}
+
+/* Larger form inputs */
+.form-control, .form-select {
+    font-size: 1.1rem;
+    padding: 0.6rem;
+}
+
+/* Table readability */
+.table td, .table th {
+    font-size: 1rem;
+    padding: 0.85rem 1rem;
+    vertical-align: middle;
+}
+
+/* Navbar */
+.navbar {
+    font-size: 1.1rem;
+}
+.navbar-brand {
+    font-size: 1.4rem;
+    font-weight: bold;
+}
+
+/* Hindi hint text under form labels */
+.form-hint {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-top: 2px;
+    margin-bottom: 4px;
+}
+
+/* Colour-coded action buttons */
+.btn-issue { background-color: #0d6efd; color: white; border-color: #0d6efd; }
+.btn-issue:hover { background-color: #0b5ed7; color: white; }
+.btn-return { background-color: #198754; color: white; border-color: #198754; }
+.btn-return:hover { background-color: #157347; color: white; }
+.btn-reissue { background-color: #fd7e14; color: white; border-color: #fd7e14; }
+.btn-reissue:hover { background-color: #e06910; color: white; }
+
+/* Stat card numbers on dashboard */
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    line-height: 1;
+}
+
+/* Make flash messages more visible */
+.alert {
+    font-size: 1.05rem;
+}
+
+/* Print-friendly: hide navbar and buttons when printing */
+@media print {
+    .navbar, .btn, form { display: none !important; }
+}
