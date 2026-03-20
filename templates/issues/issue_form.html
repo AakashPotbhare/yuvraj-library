@@ -20,6 +20,7 @@
             {% for m in members_found %}
             <a href="{{ url_for('issues.new_issue', member_q=member_q, book_q=book_q, member_id=m['id'], book_id=selected_book_id) }}"
                class="list-group-item list-group-item-action {% if selected_member_id == m['id']|string %}active{% endif %}">
+                <code class="me-1" style="font-size:.82rem;">{{ m['member_code'] or '' }}</code>
                 <strong>{{ m['name'] }}</strong> — {{ m['phone'] }} <span class="badge bg-secondary">{{ m['member_type'] }}</span>
             </a>
             {% endfor %}
@@ -28,7 +29,9 @@
         <p class="text-muted">No members found for "{{ member_q }}".</p>
         {% endif %}
         {% if selected_member_id %}
-        <div class="alert alert-success mt-2">Member selected (ID: {{ selected_member_id }})</div>
+        {% for m in members_found %}{% if m['id']|string == selected_member_id %}
+        <div class="alert alert-success mt-2">Selected: <strong>{{ m['name'] }}</strong> <code>{{ m['member_code'] or '' }}</code></div>
+        {% endif %}{% endfor %}
         {% endif %}
     </div>
 
@@ -48,6 +51,7 @@
             {% if b['available_copies'] > 0 %}
             <a href="{{ url_for('issues.new_issue', member_q=member_q, book_q=book_q, member_id=selected_member_id, book_id=b['id']) }}"
                class="list-group-item list-group-item-action {% if selected_book_id == b['id']|string %}active{% endif %}">
+                <code class="me-1" style="font-size:.82rem;">{{ b['book_code'] or '' }}</code>
                 <strong>{{ b['title'] }}</strong> — {{ b['author'] }}
                 <span class="badge bg-success ms-1">{{ b['available_copies'] }} available</span>
             </a>
@@ -63,7 +67,9 @@
         <p class="text-muted">No books found for "{{ book_q }}".</p>
         {% endif %}
         {% if selected_book_id %}
-        <div class="alert alert-success mt-2">Book selected (ID: {{ selected_book_id }})</div>
+        {% for b in books_found %}{% if b['id']|string == selected_book_id %}
+        <div class="alert alert-success mt-2">Selected: <strong>{{ b['title'] }}</strong> <code>{{ b['book_code'] or '' }}</code></div>
+        {% endif %}{% endfor %}
         {% endif %}
     </div>
 </div>

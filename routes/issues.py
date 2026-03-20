@@ -23,8 +23,8 @@ def get_available_copies(db, book_id):
 def list_issues():
     db = get_db()
     issues = db.execute(
-        """SELECT i.*, b.title, b.author, b.rack_location,
-                  m.name AS member_name, m.phone
+        """SELECT i.*, b.title, b.author, b.rack_location, b.book_code,
+                  m.name AS member_name, m.phone, m.member_code
            FROM issues i
            JOIN books b ON i.book_id = b.id
            JOIN members m ON i.member_id = m.id
@@ -43,8 +43,8 @@ def overdue_list():
     today_date = date.today()
     raw_rows = db.execute(
         """SELECT i.*,
-                  b.title, b.author, b.rack_location,
-                  m.name AS member_name, m.phone
+                  b.title, b.author, b.rack_location, b.book_code,
+                  m.name AS member_name, m.phone, m.member_code
            FROM issues i
            JOIN books b ON i.book_id = b.id
            JOIN members m ON i.member_id = m.id

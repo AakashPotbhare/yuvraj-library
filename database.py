@@ -108,17 +108,27 @@ def init_db():
     db = get_db()
     if _IS_PG:
         # Schema already applied to Supabase via MCP migrations
-        # Just run the migration for doc_filename (no-op if exists)
-        try:
-            db.execute("ALTER TABLE members ADD COLUMN doc_filename TEXT")
-            db.commit()
-        except Exception:
-            db._conn.rollback()
+        # Run incremental migrations (no-op if columns already exist)
+        for sql in [
+            "ALTER TABLE members ADD COLUMN doc_filename TEXT",
+            "ALTER TABLE members ADD COLUMN member_code TEXT UNIQUE",
+            "ALTER TABLE books ADD COLUMN book_code TEXT UNIQUE",
+        ]:
+            try:
+                db.execute(sql)
+                db.commit()
+            except Exception:
+                db._conn.rollback()
+        # Backfill codes for existing rows
+        db.execute("UPDATE members SET member_code = 'MEM-' || LPAD(id::text, 4, '0') WHERE member_code IS NULL")
+        db.execute("UPDATE books SET book_code = 'BOOK-' || LPAD(id::text, 4, '0') WHERE book_code IS NULL")
+        db.commit()
         return
 
     db.executescript("""
         CREATE TABLE IF NOT EXISTS members (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            member_code TEXT,
             name        TEXT NOT NULL,
             phone       TEXT NOT NULL,
             address     TEXT NOT NULL,
@@ -134,6 +144,7 @@ def init_db():
 
         CREATE TABLE IF NOT EXISTS books (
             id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            book_code     TEXT,
             title         TEXT NOT NULL,
             author        TEXT NOT NULL,
             isbn          TEXT,
@@ -176,6 +187,20 @@ def init_db():
             reset_token_expiry TEXT
         );
     """)
+    db.commit()
+
+    # Incremental migrations — add new columns to existing databases (no-op if already present)
+    existing_member_cols = [row[1] for row in db.execute("PRAGMA table_info(members)").fetchall()]
+    existing_book_cols = [row[1] for row in db.execute("PRAGMA table_info(books)").fetchall()]
+    if "member_code" not in existing_member_cols:
+        db.execute("ALTER TABLE members ADD COLUMN member_code TEXT")
+        db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_member_code ON members(member_code)")
+    if "book_code" not in existing_book_cols:
+        db.execute("ALTER TABLE books ADD COLUMN book_code TEXT")
+        db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_book_code ON books(book_code)")
+    # Backfill codes for existing rows that don't have one yet
+    db.execute("UPDATE members SET member_code = 'MEM-' || printf('%04d', id) WHERE member_code IS NULL")
+    db.execute("UPDATE books SET book_code = 'BOOK-' || printf('%04d', id) WHERE book_code IS NULL")
     db.commit()
 
 

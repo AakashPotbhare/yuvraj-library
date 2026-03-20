@@ -34,6 +34,10 @@
             <div class="card-header">Member Details</div>
             <div class="card-body p-3">
                 <div class="detail-row">
+                    <div class="detail-label">Member ID</div>
+                    <div class="detail-value"><code class="text-primary">{{ member['member_code'] or '—' }}</code></div>
+                </div>
+                <div class="detail-row">
                     <div class="detail-label">Phone</div>
                     <div class="detail-value">{{ member['phone'] }}</div>
                 </div>

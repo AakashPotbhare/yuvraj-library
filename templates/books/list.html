@@ -19,6 +19,7 @@
     <table class="table table-hover">
         <thead>
             <tr>
+                <th>Book ID</th>
                 <th>Title</th>
                 <th>Author</th>
                 <th>Category</th>
@@ -30,6 +31,7 @@
         <tbody>
             {% for b in books %}
             <tr>
+                <td><code class="text-primary" style="font-size:.85rem;">{{ b['book_code'] or '—' }}</code></td>
                 <td>
                     <a href="{{ url_for('books.view_book', id=b['id']) }}"
                        class="fw-semibold text-decoration-none">{{ b['title'] }}</a>

@@ -25,6 +25,10 @@ def create_app(test_config=None):
 
     init_app(app)
 
+    with app.app_context():
+        from database import init_db
+        init_db()
+
     # Ensure upload dir exists for local mode
     if not os.environ.get("DATABASE_URL"):
         upload_dir = os.path.join(app.root_path, "static", "uploads", "member_docs")
@@ -46,7 +50,4 @@ def create_app(test_config=None):
 app = create_app()
 
 if __name__ == "__main__":
-    from database import init_db
-    with app.app_context():
-        init_db()
     app.run(host="127.0.0.1", port=5000, debug=False)

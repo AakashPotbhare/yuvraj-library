@@ -77,6 +77,9 @@ def add_book():
         )
         db.commit()
         book_id = cursor.lastrowid
+        db.execute("UPDATE books SET book_code = ? WHERE id = ?",
+                   (f"BOOK-{book_id:04d}", book_id))
+        db.commit()
         flash(f"Book '{title}' added successfully.", "success")
         return redirect(url_for("books.view_book", id=book_id))
     return render_template("books/add.html", form={}, categories=CATEGORIES)

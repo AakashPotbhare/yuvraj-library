@@ -107,6 +107,9 @@ def add_member():
         )
         db.commit()
         member_id = cursor.lastrowid
+        db.execute("UPDATE members SET member_code = ? WHERE id = ?",
+                   (f"MEM-{member_id:04d}", member_id))
+        db.commit()
         flash(f"Member '{name}' added successfully.", "success")
         return redirect(url_for("members.view_member", id=member_id))
     return render_template("members/add.html", form={})
