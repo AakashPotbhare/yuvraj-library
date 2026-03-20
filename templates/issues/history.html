@@ -5,7 +5,7 @@
 <form method="get" class="mb-3 d-flex gap-2" style="max-width: 500px;">
     <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Search by book title or member name...">
     <button type="submit" class="btn btn-outline-secondary">Search</button>
-    {% if q %}<a href="/issues/history" class="btn btn-outline-danger">Clear</a>{% endif %}
+    {% if q %}<a href="{{ url_for('issues.history') }}" class="btn btn-outline-danger">Clear</a>{% endif %}
 </form>
 {% if issues %}
 <table class="table table-bordered table-sm">
@@ -28,5 +28,5 @@
 {% else %}
 <p class="text-muted">No issue records found{% if q %} for "{{ q }}"{% endif %}.</p>
 {% endif %}
-<a href="/issues" class="btn btn-outline-secondary mt-3">← Back to Active Issues</a>
+<a href="{{ url_for('issues.list_issues') }}" class="btn btn-outline-secondary mt-3">← Back to Active Issues</a>
 {% endblock %}

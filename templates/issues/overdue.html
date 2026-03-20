@@ -16,18 +16,18 @@
     <tbody>
         {% for i in issues %}
         <tr>
-            <td><a href="/books/{{ i['book_id'] }}">{{ i['title'] }}</a></td>
-            <td><a href="/members/{{ i['member_id'] }}">{{ i['member_name'] }}</a></td>
+            <td><a href="{{ url_for('books.view_book', id=i['book_id']) }}">{{ i['title'] }}</a></td>
+            <td><a href="{{ url_for('members.view_member', id=i['member_id']) }}">{{ i['member_name'] }}</a></td>
             <td>{{ i['phone'] }}</td>
             <td>{{ i['due_date'] }}</td>
             <td><strong>{{ i['days_overdue'] }} days</strong></td>
             <td>{{ i['reissue_count'] }}</td>
             <td>
-                <form method="post" action="/issues/{{ i['id'] }}/return" class="d-inline">
+                <form method="post" action="{{ url_for('issues.return_book', id=i['id']) }}" class="d-inline">
                     <button type="submit" class="btn btn-sm btn-success"
                         onclick="return confirm('Mark as returned?')">Return</button>
                 </form>
-                <form method="post" action="/issues/{{ i['id'] }}/reissue" class="d-inline ms-1">
+                <form method="post" action="{{ url_for('issues.reissue_book', id=i['id']) }}" class="d-inline ms-1">
                     <button type="submit" class="btn btn-sm btn-warning">Reissue +15d</button>
                 </form>
             </td>
@@ -38,5 +38,5 @@
 {% else %}
 <div class="alert alert-success">No overdue books! All issued books are within their due dates.</div>
 {% endif %}
-<a href="/issues" class="btn btn-outline-secondary mt-3">← Back to Active Issues</a>
+<a href="{{ url_for('issues.list_issues') }}" class="btn btn-outline-secondary mt-3">← Back to Active Issues</a>
 {% endblock %}

@@ -51,6 +51,11 @@ def test_return_book(client):
     client.post("/issues/new", data={"member_id": "1", "book_id": "1"})
     r = client.post("/issues/1/return", follow_redirects=True)
     assert r.status_code == 200
+    # Verify returned_on is set
+    with client.application.app_context():
+        db = get_db()
+        issue = db.execute("SELECT returned_on FROM issues WHERE id=1").fetchone()
+        assert issue["returned_on"] is not None
 
 
 def test_reissue_extends_due_date(client):
@@ -107,8 +112,17 @@ def test_active_issues_list(client):
 def test_inactive_member_cannot_issue(client):
     seed_member(client)
     seed_book(client)
-    # Deactivate the member
     client.post("/members/1/deactivate")
     r = client.post("/issues/new", data={"member_id": "1", "book_id": "1"}, follow_redirects=True)
     assert r.status_code == 200
-    assert b"inactive" in r.data.lower() or b"active" in r.data.lower() or b"cannot" in r.data.lower()
+    assert b"inactive" in r.data.lower() or b"Member not found" in r.data
+
+
+def test_history_shows_returned_issue(client):
+    seed_member(client)
+    seed_book(client)
+    client.post("/issues/new", data={"member_id": "1", "book_id": "1"})
+    client.post("/issues/1/return")
+    r = client.get("/issues/history")
+    assert r.status_code == 200
+    assert b"Godan" in r.data

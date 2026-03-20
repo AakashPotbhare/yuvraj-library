@@ -30,7 +30,7 @@ def list_issues():
            WHERE i.returned_on IS NULL
            ORDER BY i.due_date ASC"""
     ).fetchall()
-    today = date.today()
+    today = date.today().isoformat()
     return render_template("issues/active.html", issues=issues, today=today)
 
 
@@ -75,7 +75,7 @@ def history():
                JOIN members m ON i.member_id = m.id
                ORDER BY i.created_at DESC LIMIT 200"""
         ).fetchall()
-    today = date.today()
+    today = date.today().isoformat()
     return render_template("issues/history.html", issues=issues, q=q, today=today)
 
 
@@ -160,7 +160,7 @@ def return_book(id):
         flash("This book has already been returned.", "warning")
         return redirect(url_for("issues.list_issues"))
     db.execute(
-        "UPDATE issues SET returned_on=? WHERE id=?",
+        "UPDATE issues SET returned_on=? WHERE id=? AND returned_on IS NULL",
         (date.today().isoformat(), id)
     )
     db.commit()

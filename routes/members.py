@@ -72,7 +72,7 @@ def view_member(id):
         "members/view.html",
         member=member,
         open_issues=open_issues,
-        today=date.today()
+        today=date.today().isoformat()
     )
 
 

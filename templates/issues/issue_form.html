@@ -18,7 +18,7 @@
         {% if members_found %}
         <div class="list-group">
             {% for m in members_found %}
-            <a href="?member_q={{ member_q }}&book_q={{ book_q }}&member_id={{ m['id'] }}&book_id={{ selected_book_id }}"
+            <a href="{{ url_for('issues.new_issue', member_q=member_q, book_q=book_q, member_id=m['id'], book_id=selected_book_id) }}"
                class="list-group-item list-group-item-action {% if selected_member_id == m['id']|string %}active{% endif %}">
                 <strong>{{ m['name'] }}</strong> — {{ m['phone'] }} <span class="badge bg-secondary">{{ m['member_type'] }}</span>
             </a>
@@ -46,7 +46,7 @@
         <div class="list-group">
             {% for b in books_found %}
             {% if b['available_copies'] > 0 %}
-            <a href="?member_q={{ member_q }}&book_q={{ book_q }}&member_id={{ selected_member_id }}&book_id={{ b['id'] }}"
+            <a href="{{ url_for('issues.new_issue', member_q=member_q, book_q=book_q, member_id=selected_member_id, book_id=b['id']) }}"
                class="list-group-item list-group-item-action {% if selected_book_id == b['id']|string %}active{% endif %}">
                 <strong>{{ b['title'] }}</strong> — {{ b['author'] }}
                 <span class="badge bg-success ms-1">{{ b['available_copies'] }} available</span>
@@ -75,15 +75,15 @@
 <div class="alert alert-info">
     Issuing this book will set the due date to <strong>{{ default_loan_days }} days</strong> from today.
 </div>
-<form method="post" action="/issues/new">
+<form method="post" action="{{ url_for('issues.new_issue') }}">
     <input type="hidden" name="member_id" value="{{ selected_member_id }}">
     <input type="hidden" name="book_id" value="{{ selected_book_id }}">
     <button type="submit" class="btn btn-primary btn-lg">Confirm Issue</button>
-    <a href="/issues/new" class="btn btn-outline-secondary ms-2">Cancel</a>
+    <a href="{{ url_for('issues.new_issue') }}" class="btn btn-outline-secondary ms-2">Cancel</a>
 </form>
 {% endif %}
 
 <div class="mt-4">
-    <a href="/issues" class="btn btn-outline-secondary">← Back to Issues</a>
+    <a href="{{ url_for('issues.list_issues') }}" class="btn btn-outline-secondary">← Back to Issues</a>
 </div>
 {% endblock %}
