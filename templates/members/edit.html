@@ -1,8 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Edit Member — Yuvraj Library{% endblock %}
 {% block content %}
-<h2>Edit Member</h2>
-<form method="post" class="mt-3" style="max-width: 600px;">
+<div class="page-header">
+    <h2>Edit Member</h2>
+    <a href="{{ url_for('members.view_member', id=member['id']) }}" class="btn btn-outline-secondary">← Back</a>
+</div>
+<div class="form-card">
+<form method="post">
     <div class="mb-3">
         <label class="form-label">Full Name *</label>
         <div class="form-hint">सदस्य का नाम</div>
@@ -43,7 +47,10 @@
         <label class="form-label">Notes (optional)</label>
         <textarea name="notes" class="form-control" rows="2">{{ form.get('notes', '') }}</textarea>
     </div>
-    <button type="submit" class="btn btn-primary">Update Member</button>
-    <a href="/members/{{ member['id'] }}" class="btn btn-outline-secondary ms-2">Cancel</a>
+    <div class="mt-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Update Member</button>
+        <a href="{{ url_for('members.view_member', id=member['id']) }}" class="btn btn-outline-secondary">Cancel</a>
+    </div>
 </form>
+</div>
 {% endblock %}

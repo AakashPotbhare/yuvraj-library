@@ -1,42 +1,64 @@
 {% extends "base.html" %}
 {% block title %}Overdue Books — Yuvraj Library{% endblock %}
 {% block content %}
-<h2>Overdue Books</h2>
+
+<div class="page-header">
+    <h2>Overdue Books</h2>
+    <a href="{{ url_for('issues.list_issues') }}" class="btn btn-outline-secondary">← Active Issues</a>
+</div>
+
 {% if issues %}
 <div class="alert alert-danger">
-    <strong>{{ issues|length }} book(s)</strong> are overdue and need to be returned or reissued.
+    <span class="alert-icon">✗</span>
+    <strong>{{ issues|length }} book{{ 's' if issues|length != 1 }}</strong> overdue — contact members to return or reissue.
 </div>
-<table class="table table-bordered table-danger">
-    <thead class="table-dark">
-        <tr>
-            <th>Book</th><th>Member</th><th>Phone</th>
-            <th>Due Date</th><th>Days Overdue</th><th>Reissues</th><th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for i in issues %}
-        <tr>
-            <td><a href="{{ url_for('books.view_book', id=i['book_id']) }}">{{ i['title'] }}</a></td>
-            <td><a href="{{ url_for('members.view_member', id=i['member_id']) }}">{{ i['member_name'] }}</a></td>
-            <td>{{ i['phone'] }}</td>
-            <td>{{ i['due_date'] }}</td>
-            <td><strong>{{ i['days_overdue'] }} days</strong></td>
-            <td>{{ i['reissue_count'] }}</td>
-            <td>
-                <form method="post" action="{{ url_for('issues.return_book', id=i['id']) }}" class="d-inline">
-                    <button type="submit" class="btn btn-sm btn-success"
-                        onclick="return confirm('Mark as returned?')">Return</button>
-                </form>
-                <form method="post" action="{{ url_for('issues.reissue_book', id=i['id']) }}" class="d-inline ms-1">
-                    <button type="submit" class="btn btn-sm btn-warning">Reissue +15d</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="table-wrap">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Book</th>
+                <th>Member</th>
+                <th>Phone</th>
+                <th>Due Date</th>
+                <th>Days Overdue</th>
+                <th>Reissues</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for i in issues %}
+            <tr class="row-overdue">
+                <td>
+                    <a href="{{ url_for('books.view_book', id=i['book_id']) }}"
+                       class="fw-semibold text-decoration-none">{{ i['title'] }}</a>
+                </td>
+                <td><a href="{{ url_for('members.view_member', id=i['member_id']) }}"
+                       class="text-decoration-none">{{ i['member_name'] }}</a></td>
+                <td class="text-muted">{{ i['phone'] }}</td>
+                <td>{{ i['due_date'] }}</td>
+                <td><span class="badge bg-danger">{{ i['days_overdue'] }} days</span></td>
+                <td class="text-center">
+                    {% if i['reissue_count'] > 0 %}
+                        <span class="badge bg-secondary">{{ i['reissue_count'] }}×</span>
+                    {% else %}—{% endif %}
+                </td>
+                <td>
+                    <form method="post" action="{{ url_for('issues.return_book', id=i['id']) }}" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-action-return"
+                            onclick="return confirm('Mark as returned?')">Return</button>
+                    </form>
+                    <form method="post" action="{{ url_for('issues.reissue_book', id=i['id']) }}" class="d-inline ms-1">
+                        <button type="submit" class="btn btn-sm btn-action-reissue"
+                            onclick="return confirm('Extend by 15 days?')">+15 days</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% else %}
-<div class="alert alert-success">No overdue books! All issued books are within their due dates.</div>
+<div class="alert alert-success"><span class="alert-icon">✓</span> No overdue books! All issued books are within their due dates.</div>
 {% endif %}
-<a href="{{ url_for('issues.list_issues') }}" class="btn btn-outline-secondary mt-3">← Back to Active Issues</a>
+
 {% endblock %}

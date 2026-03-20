@@ -1,36 +1,56 @@
 {% extends "base.html" %}
 {% block title %}Members — Yuvraj Library{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
+
+<div class="page-header">
     <h2>Members</h2>
-    <a href="/members/add" class="btn btn-primary">+ Add Member</a>
+    <a href="{{ url_for('members.add_member') }}" class="btn btn-primary">+ Add Member</a>
 </div>
-<form method="get" class="mb-3 d-flex gap-2">
-    <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Search by name or phone...">
+
+<form method="get" class="search-row">
+    <input type="text" name="q" value="{{ q }}" class="form-control"
+           placeholder="Search by name or phone...">
     <button type="submit" class="btn btn-outline-secondary">Search</button>
-    {% if q %}<a href="/members" class="btn btn-outline-danger">Clear</a>{% endif %}
+    {% if q %}<a href="{{ url_for('members.list_members') }}" class="btn btn-outline-danger">Clear</a>{% endif %}
 </form>
+
 {% if members %}
-<table class="table table-bordered table-hover">
-    <thead class="table-dark">
-        <tr><th>Name</th><th>Phone</th><th>Type</th><th>Joined</th><th>Actions</th></tr>
-    </thead>
-    <tbody>
-        {% for m in members %}
-        <tr>
-            <td><a href="/members/{{ m['id'] }}">{{ m['name'] }}</a></td>
-            <td>{{ m['phone'] }}</td>
-            <td>{{ m['member_type'] }}</td>
-            <td>{{ m['joined_on'] }}</td>
-            <td>
-                <a href="/members/{{ m['id'] }}" class="btn btn-sm btn-outline-primary">View</a>
-                <a href="/members/{{ m['id'] }}/edit" class="btn btn-sm btn-outline-secondary">Edit</a>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="table-wrap">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Type</th>
+                <th>Joined</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in members %}
+            <tr>
+                <td>
+                    <a href="{{ url_for('members.view_member', id=m['id']) }}"
+                       class="fw-semibold text-decoration-none">{{ m['name'] }}</a>
+                </td>
+                <td class="text-muted">{{ m['phone'] }}</td>
+                <td>
+                    <span class="badge bg-secondary">{{ m['member_type'] }}</span>
+                </td>
+                <td class="text-muted">{{ m['joined_on'] }}</td>
+                <td>
+                    <a href="{{ url_for('members.view_member', id=m['id']) }}"
+                       class="btn btn-sm btn-outline-primary">View</a>
+                    <a href="{{ url_for('members.edit_member', id=m['id']) }}"
+                       class="btn btn-sm btn-outline-secondary ms-1">Edit</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% else %}
 <p class="text-muted">No members found{% if q %} for "{{ q }}"{% endif %}.</p>
 {% endif %}
+
 {% endblock %}

@@ -1,50 +1,96 @@
 {% extends "base.html" %}
 {% block title %}{{ member['name'] }} — Yuvraj Library{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>{{ member['name'] }}</h2>
+
+<div class="page-header">
     <div>
-        <a href="/members/{{ member['id'] }}/edit" class="btn btn-outline-secondary">Edit</a>
+        <h2>{{ member['name'] }}</h2>
+        <div class="page-subtitle">
+            <span class="badge bg-secondary">{{ member['member_type'] }}</span>
+            {% if not member['is_active'] %}
+                <span class="badge bg-danger ms-1">Inactive</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('members.edit_member', id=member['id']) }}" class="btn btn-outline-secondary">Edit</a>
         {% if member['is_active'] %}
-        <form method="post" action="/members/{{ member['id'] }}/deactivate" class="d-inline">
-            <button type="submit" class="btn btn-outline-danger ms-2"
+        <form method="post" action="{{ url_for('members.deactivate_member', id=member['id']) }}" class="d-inline">
+            <button type="submit" class="btn btn-outline-danger"
                 onclick="return confirm('Deactivate this member?')">Deactivate</button>
         </form>
+        {% endif %}
+        <a href="{{ url_for('members.list_members') }}" class="btn btn-outline-secondary">← Members</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header">Member Details</div>
+            <div class="card-body p-3">
+                <div class="detail-row">
+                    <div class="detail-label">Phone</div>
+                    <div class="detail-value">{{ member['phone'] }}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Address</div>
+                    <div class="detail-value">{{ member['address'] }}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Govt. ID</div>
+                    <div class="detail-value">{{ member['id_type'] }}: <code>{{ member['id_number'] }}</code></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Member Type</div>
+                    <div class="detail-value">{{ member['member_type'] }}</div>
+                </div>
+                <div class="detail-row" style="border-bottom: none;">
+                    <div class="detail-label">Joined</div>
+                    <div class="detail-value">{{ member['joined_on'] }}</div>
+                </div>
+                {% if member['notes'] %}
+                <div class="detail-row" style="border-bottom: none;">
+                    <div class="detail-label">Notes</div>
+                    <div class="detail-value text-muted">{{ member['notes'] }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        {% if open_issues %}
+        <div class="section-title">Currently Borrowed ({{ open_issues|length }})</div>
+        <div class="table-wrap">
+            <table class="table table-hover">
+                <thead>
+                    <tr><th>Book</th><th>Rack</th><th>Issued On</th><th>Due Date</th></tr>
+                </thead>
+                <tbody>
+                    {% for issue in open_issues %}
+                    <tr {% if issue['due_date'] < today %}class="row-overdue"{% endif %}>
+                        <td>
+                            <span class="fw-semibold">{{ issue['title'] }}</span>
+                            <br><small class="text-muted">{{ issue['author'] }}</small>
+                        </td>
+                        <td><code class="text-muted" style="font-size:.82rem;">{{ issue['rack_location'] or '—' }}</code></td>
+                        <td class="text-muted">{{ issue['issued_on'] }}</td>
+                        <td>
+                            {{ issue['due_date'] }}
+                            {% if issue['due_date'] < today %}
+                                <span class="badge bg-danger ms-1">Overdue</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         {% else %}
-        <span class="badge bg-secondary ms-2">Inactive</span>
+        <div class="alert alert-info mt-2"><span class="alert-icon">ℹ</span> No books currently borrowed.</div>
         {% endif %}
     </div>
 </div>
-<table class="table table-bordered" style="max-width: 600px;">
-    <tr><th>Phone</th><td>{{ member['phone'] }}</td></tr>
-    <tr><th>Address</th><td>{{ member['address'] }}</td></tr>
-    <tr><th>ID</th><td>{{ member['id_type'] }}: {{ member['id_number'] }}</td></tr>
-    <tr><th>Type</th><td>{{ member['member_type'] }}</td></tr>
-    <tr><th>Joined</th><td>{{ member['joined_on'] }}</td></tr>
-    {% if member['notes'] %}<tr><th>Notes</th><td>{{ member['notes'] }}</td></tr>{% endif %}
-</table>
 
-{% if open_issues %}
-<h4 class="mt-4">Currently Borrowed Books</h4>
-<table class="table table-bordered">
-    <thead class="table-dark">
-        <tr><th>Book</th><th>Rack</th><th>Issued On</th><th>Due Date</th><th>Reissues</th></tr>
-    </thead>
-    <tbody>
-        {% for issue in open_issues %}
-        <tr {% if issue['due_date'] < today %}class="table-danger"{% endif %}>
-            <td>{{ issue['title'] }} <small class="text-muted">by {{ issue['author'] }}</small></td>
-            <td>{{ issue['rack_location'] or '-' }}</td>
-            <td>{{ issue['issued_on'] }}</td>
-            <td>{{ issue['due_date'] }}</td>
-            <td>{{ issue['reissue_count'] }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% else %}
-<p class="text-muted mt-3">No books currently borrowed.</p>
-{% endif %}
-
-<a href="/members" class="btn btn-outline-secondary mt-3">&#8592; Back to Members</a>
 {% endblock %}

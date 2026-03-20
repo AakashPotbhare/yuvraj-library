@@ -1,87 +1,110 @@
 {% extends "base.html" %}
 {% block title %}Dashboard — Yuvraj Library{% endblock %}
 {% block content %}
-<h2 class="mb-4">Yuvraj Library — Dashboard</h2>
 
-<!-- 4 stat cards -->
+<div class="page-header">
+    <div>
+        <h2>Dashboard</h2>
+        <div class="page-subtitle">Yuvraj Library · Chhatri Chowk, Ujjain</div>
+    </div>
+    <a href="{{ url_for('issues.new_issue') }}" class="btn btn-action-issue">+ Issue a Book</a>
+</div>
+
+<!-- Stat cards -->
 <div class="row g-3 mb-4">
-    <div class="col-sm-6 col-lg-3">
-        <div class="card text-white bg-primary h-100">
-            <div class="card-body text-center">
-                <div style="font-size: 2.5rem; font-weight: bold;">{{ total_copies }}</div>
-                <div class="mt-1">Total Books</div>
-                <div style="font-size: 0.85rem; opacity: 0.85;">कुल पुस्तकें</div>
+    <div class="col-sm-6 col-xl-3">
+        <a href="{{ url_for('books.list_books') }}" class="stat-card stat-books">
+            <div class="stat-card-icon">📚</div>
+            <div class="stat-card-body">
+                <div class="stat-card-number">{{ total_copies }}</div>
+                <div class="stat-card-label">Total Books</div>
+                <div class="stat-card-hindi">कुल पुस्तकें</div>
             </div>
-        </div>
+        </a>
     </div>
-    <div class="col-sm-6 col-lg-3">
-        <div class="card text-white bg-success h-100">
-            <div class="card-body text-center">
-                <div style="font-size: 2.5rem; font-weight: bold;">{{ total_members }}</div>
-                <div class="mt-1">Active Members</div>
-                <div style="font-size: 0.85rem; opacity: 0.85;">सक्रिय सदस्य</div>
+    <div class="col-sm-6 col-xl-3">
+        <a href="{{ url_for('members.list_members') }}" class="stat-card stat-members">
+            <div class="stat-card-icon">👥</div>
+            <div class="stat-card-body">
+                <div class="stat-card-number">{{ total_members }}</div>
+                <div class="stat-card-label">Active Members</div>
+                <div class="stat-card-hindi">सक्रिय सदस्य</div>
             </div>
-        </div>
+        </a>
     </div>
-    <div class="col-sm-6 col-lg-3">
-        <div class="card text-white bg-info h-100">
-            <div class="card-body text-center">
-                <div style="font-size: 2.5rem; font-weight: bold;">{{ currently_issued }}</div>
-                <div class="mt-1">Books Issued</div>
-                <div style="font-size: 0.85rem; opacity: 0.85;">जारी पुस्तकें</div>
+    <div class="col-sm-6 col-xl-3">
+        <a href="{{ url_for('issues.list_issues') }}" class="stat-card stat-issued">
+            <div class="stat-card-icon">📖</div>
+            <div class="stat-card-body">
+                <div class="stat-card-number">{{ currently_issued }}</div>
+                <div class="stat-card-label">Books Issued</div>
+                <div class="stat-card-hindi">जारी पुस्तकें</div>
             </div>
-        </div>
+        </a>
     </div>
-    <div class="col-sm-6 col-lg-3">
-        <div class="card text-white {% if overdue_count > 0 %}bg-danger{% else %}bg-secondary{% endif %} h-100">
-            <div class="card-body text-center">
-                <div style="font-size: 2.5rem; font-weight: bold;">{{ overdue_count }}</div>
-                <div class="mt-1">Overdue</div>
-                <div style="font-size: 0.85rem; opacity: 0.85;">देर हो गई</div>
+    <div class="col-sm-6 col-xl-3">
+        <a href="{{ url_for('issues.overdue_list') }}" class="stat-card {% if overdue_count > 0 %}stat-overdue{% else %}stat-safe{% endif %}">
+            <div class="stat-card-icon">{% if overdue_count > 0 %}⚠️{% else %}✅{% endif %}</div>
+            <div class="stat-card-body">
+                <div class="stat-card-number">{{ overdue_count }}</div>
+                <div class="stat-card-label">Overdue</div>
+                <div class="stat-card-hindi">देर हो गई</div>
             </div>
-        </div>
+        </a>
     </div>
 </div>
 
 <!-- Quick actions -->
-<div class="mb-4 d-flex gap-2 flex-wrap">
-    <a href="{{ url_for('issues.new_issue') }}" class="btn btn-primary">+ Issue a Book</a>
-    <a href="{{ url_for('members.add_member') }}" class="btn btn-outline-success">+ Add Member</a>
-    <a href="{{ url_for('books.add_book') }}" class="btn btn-outline-secondary">+ Add Book</a>
-    <a href="{{ url_for('issues.list_issues') }}" class="btn btn-outline-info">View All Issues</a>
+<div class="quick-actions">
+    <a href="{{ url_for('issues.new_issue') }}" class="btn btn-action-issue">📖 Issue a Book</a>
+    <a href="{{ url_for('members.add_member') }}" class="btn btn-action-return">👤 Add Member</a>
+    <a href="{{ url_for('books.add_book') }}" class="btn btn-outline-secondary">📚 Add Book</a>
+    <a href="{{ url_for('issues.list_issues') }}" class="btn btn-outline-secondary">📋 All Issues</a>
+    <a href="{{ url_for('issues.history') }}" class="btn btn-outline-secondary">🕐 History</a>
 </div>
 
 {% if overdue_items %}
-<h4 class="text-danger">Overdue Books <span class="badge bg-danger">{{ overdue_count }}</span></h4>
-<table class="table table-bordered table-danger">
-    <thead class="table-dark">
-        <tr><th>Book</th><th>Member</th><th>Phone</th><th>Due Date</th><th>Days Overdue</th><th>Actions</th></tr>
-    </thead>
-    <tbody>
-        {% for i in overdue_items %}
-        <tr>
-            <td><a href="{{ url_for('books.view_book', id=i['book_id']) }}">{{ i['title'] }}</a></td>
-            <td><a href="{{ url_for('members.view_member', id=i['member_id']) }}">{{ i['member_name'] }}</a></td>
-            <td>{{ i['phone'] }}</td>
-            <td>{{ i['due_date'] }}</td>
-            <td><strong>{{ i['days_overdue'] }} days</strong></td>
-            <td>
-                <form method="post" action="{{ url_for('issues.return_book', id=i['id']) }}" class="d-inline">
-                    <button type="submit" class="btn btn-sm btn-success"
-                        onclick="return confirm('Mark as returned?')">Return</button>
-                </form>
-                <form method="post" action="{{ url_for('issues.reissue_book', id=i['id']) }}" class="d-inline ms-1">
-                    <button type="submit" class="btn btn-sm btn-warning">Reissue</button>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="section-title">⚠️ Overdue Books <span class="badge bg-danger ms-1">{{ overdue_count }}</span></div>
+<div class="table-wrap">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Book</th>
+                <th>Member</th>
+                <th>Phone</th>
+                <th>Due Date</th>
+                <th>Days Overdue</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for i in overdue_items %}
+            <tr class="row-overdue">
+                <td><a href="{{ url_for('books.view_book', id=i['book_id']) }}" class="fw-semibold text-decoration-none">{{ i['title'] }}</a></td>
+                <td><a href="{{ url_for('members.view_member', id=i['member_id']) }}" class="text-decoration-none">{{ i['member_name'] }}</a></td>
+                <td class="text-muted">{{ i['phone'] }}</td>
+                <td>{{ i['due_date'] }}</td>
+                <td><span class="badge bg-danger">{{ i['days_overdue'] }} days</span></td>
+                <td>
+                    <form method="post" action="{{ url_for('issues.return_book', id=i['id']) }}" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-action-return"
+                            onclick="return confirm('Mark as returned?')">Return</button>
+                    </form>
+                    <form method="post" action="{{ url_for('issues.reissue_book', id=i['id']) }}" class="d-inline ms-1">
+                        <button type="submit" class="btn btn-sm btn-action-reissue"
+                            onclick="return confirm('Extend by 15 days?')">Reissue</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% if overdue_count > 5 %}
 <a href="{{ url_for('issues.overdue_list') }}" class="btn btn-outline-danger">View all {{ overdue_count }} overdue →</a>
 {% endif %}
 {% else %}
-<div class="alert alert-success mt-3">All books are within their due dates. No overdue items.</div>
+<div class="alert alert-success"><span class="alert-icon">✓</span> All books are within their due dates. No overdue items.</div>
 {% endif %}
+
 {% endblock %}
