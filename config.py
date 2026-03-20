@@ -1,6 +1,8 @@
 import os
 
-DATABASE_PATH     = os.environ.get("DATABASE_PATH", "library.db")
+# On Vercel (or any read-only serverless env), project root is not writable — use /tmp
+_default_db = "/tmp/library.db" if os.environ.get("VERCEL") else "library.db"
+DATABASE_PATH     = os.environ.get("DATABASE_PATH", _default_db)
 DEFAULT_LOAN_DAYS = int(os.environ.get("DEFAULT_LOAN_DAYS", "15"))
 APP_NAME          = "Yuvraj Library"
 SECRET_KEY        = os.environ.get("SECRET_KEY", "yuvraj-library-secret-change-in-production")

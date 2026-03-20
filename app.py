@@ -27,12 +27,19 @@ def create_app(test_config=None):
 
     with app.app_context():
         from database import init_db
-        init_db()
+        try:
+            init_db()
+        except Exception as e:
+            import logging
+            logging.warning(f"init_db() failed (will retry on first request): {e}")
 
     # Ensure upload dir exists for local mode
     if not os.environ.get("DATABASE_URL"):
-        upload_dir = os.path.join(app.root_path, "static", "uploads", "member_docs")
-        os.makedirs(upload_dir, exist_ok=True)
+        try:
+            upload_dir = os.path.join(app.root_path, "static", "uploads", "member_docs")
+            os.makedirs(upload_dir, exist_ok=True)
+        except OSError:
+            pass
 
     from routes import dashboard, auth as auth_module, admin as admin_module
     from routes import members, books, issues
