@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "yuvraj-library",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd '/Users/s411/yuvraj Library/yuvraj-library' && source venv/bin/activate && flask run --port 5001"],
+      "port": 5001
+    }
+  ]
+}

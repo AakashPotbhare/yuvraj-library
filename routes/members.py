@@ -1,11 +1,22 @@
+import os
 from datetime import date
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from werkzeug.utils import secure_filename
 from database import get_db
+from routes.auth import login_required
 
 bp = Blueprint("members", __name__, url_prefix="/members")
 
+ALLOWED_EXTENSIONS = {"pdf", "jpg", "jpeg", "png"}
+MAX_DOC_SIZE = 5 * 1024 * 1024  # 5 MB
+
+
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 @bp.route("")
+@login_required
 def list_members():
     db = get_db()
     q = request.args.get("q", "").strip()
@@ -22,6 +33,7 @@ def list_members():
 
 
 @bp.route("/add", methods=["GET", "POST"])
+@login_required
 def add_member():
     if request.method == "POST":
         name = request.form.get("name", "").strip()
@@ -42,10 +54,28 @@ def add_member():
         if error:
             flash(error, "danger")
             return render_template("members/add.html", form=request.form)
+
+        doc_filename = None
+        uploaded = request.files.get("doc_file")
+        if uploaded and uploaded.filename:
+            if not allowed_file(uploaded.filename):
+                flash("Only PDF, JPG, PNG files are allowed.", "danger")
+                return render_template("members/add.html", form=request.form)
+            if len(uploaded.read()) > MAX_DOC_SIZE:
+                flash("File too large. Maximum size is 5 MB.", "danger")
+                return render_template("members/add.html", form=request.form)
+            uploaded.seek(0)
+            db = get_db()
+            ext = uploaded.filename.rsplit(".", 1)[1].lower()
+            safe_name = f"member_{db.execute('SELECT COUNT(*) FROM members').fetchone()[0]+1}_{secure_filename(uploaded.filename)}"
+            upload_path = os.path.join(current_app.root_path, "static", "uploads", "member_docs", safe_name)
+            uploaded.save(upload_path)
+            doc_filename = safe_name
+
         db = get_db()
         cursor = db.execute(
-            "INSERT INTO members (name, phone, address, id_type, id_number, member_type) VALUES (?,?,?,?,?,?)",
-            (name, phone, address, id_type, id_number, member_type)
+            "INSERT INTO members (name, phone, address, id_type, id_number, member_type, doc_filename) VALUES (?,?,?,?,?,?,?)",
+            (name, phone, address, id_type, id_number, member_type, doc_filename)
         )
         db.commit()
         member_id = cursor.lastrowid
@@ -55,6 +85,7 @@ def add_member():
 
 
 @bp.route("/<int:id>")
+@login_required
 def view_member(id):
     db = get_db()
     member = db.execute("SELECT * FROM members WHERE id=?", (id,)).fetchone()
@@ -77,6 +108,7 @@ def view_member(id):
 
 
 @bp.route("/<int:id>/edit", methods=["GET", "POST"])
+@login_required
 def edit_member(id):
     db = get_db()
     member = db.execute("SELECT * FROM members WHERE id=?", (id,)).fetchone()
@@ -102,9 +134,25 @@ def edit_member(id):
         if error:
             flash(error, "danger")
             return render_template("members/edit.html", member=member, form=dict(request.form))
+
+        doc_filename = member["doc_filename"]
+        uploaded = request.files.get("doc_file")
+        if uploaded and uploaded.filename:
+            if not allowed_file(uploaded.filename):
+                flash("Only PDF, JPG, PNG files are allowed.", "danger")
+                return render_template("members/edit.html", member=member, form=dict(request.form))
+            if len(uploaded.read()) > MAX_DOC_SIZE:
+                flash("File too large. Maximum size is 5 MB.", "danger")
+                return render_template("members/edit.html", member=member, form=dict(request.form))
+            uploaded.seek(0)
+            safe_name = f"member_{id}_{secure_filename(uploaded.filename)}"
+            upload_path = os.path.join(current_app.root_path, "static", "uploads", "member_docs", safe_name)
+            uploaded.save(upload_path)
+            doc_filename = safe_name
+
         db.execute(
-            "UPDATE members SET name=?, phone=?, address=?, id_type=?, id_number=?, member_type=? WHERE id=?",
-            (name, phone, address, id_type, id_number, member_type, id)
+            "UPDATE members SET name=?, phone=?, address=?, id_type=?, id_number=?, member_type=?, doc_filename=? WHERE id=?",
+            (name, phone, address, id_type, id_number, member_type, doc_filename, id)
         )
         db.commit()
         flash("Member updated successfully.", "success")
@@ -114,6 +162,7 @@ def edit_member(id):
 
 
 @bp.route("/<int:id>/deactivate", methods=["POST"])
+@login_required
 def deactivate_member(id):
     db = get_db()
     member = db.execute("SELECT id FROM members WHERE id=?", (id,)).fetchone()

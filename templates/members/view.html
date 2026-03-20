@@ -45,14 +45,23 @@
                     <div class="detail-label">Member Type</div>
                     <div class="detail-value">{{ member['member_type'] }}</div>
                 </div>
-                <div class="detail-row" style="border-bottom: none;">
+                <div class="detail-row">
                     <div class="detail-label">Joined</div>
                     <div class="detail-value">{{ member['joined_on'] }}</div>
                 </div>
                 {% if member['notes'] %}
-                <div class="detail-row" style="border-bottom: none;">
+                <div class="detail-row">
                     <div class="detail-label">Notes</div>
                     <div class="detail-value text-muted">{{ member['notes'] }}</div>
+                </div>
+                {% endif %}
+                {% if member['doc_filename'] %}
+                <div class="detail-row" style="border-bottom:none;">
+                    <div class="detail-label">Document</div>
+                    <div class="detail-value">
+                        <a href="{{ url_for('static', filename='uploads/member_docs/' + member['doc_filename']) }}"
+                           target="_blank" class="btn btn-sm btn-outline-primary">📄 View Document</a>
+                    </div>
                 </div>
                 {% endif %}
             </div>

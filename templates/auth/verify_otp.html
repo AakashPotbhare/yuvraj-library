@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Password — Yuvraj Library</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+</head>
+<body style="background: var(--brand-light); display:flex; align-items:center; justify-content:center; min-height:100vh;">
+<div style="width:100%; max-width:400px; padding:1rem;">
+    <div class="text-center mb-4">
+        <div style="font-size:2.5rem;">📚</div>
+        <h1 style="font-size:1.4rem; font-weight:700; color: var(--brand-primary);">Yuvraj Library</h1>
+    </div>
+    <div class="form-card" style="max-width:100%;">
+        <h2 style="font-size:1.1rem; margin-bottom:.3rem;">Reset Password</h2>
+        <p style="font-size:.82rem; color: var(--text-muted); margin-bottom:1.25rem;">Enter the OTP sent to <strong>{{ email }}</strong> and your new password.</p>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message|safe }}</div>
+            {% endfor %}
+        {% endwith %}
+        <form method="post">
+            <div class="mb-3">
+                <label class="form-label">6-Digit OTP</label>
+                <input type="text" name="otp" class="form-control" maxlength="6"
+                       pattern="[0-9]{6}" placeholder="______" autofocus required
+                       style="letter-spacing: .4rem; font-size: 1.3rem; text-align: center;">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">New Password</label>
+                <input type="password" name="new_password" class="form-control" required minlength="6">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Confirm New Password</label>
+                <input type="password" name="confirm_password" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 mt-2">Set New Password</button>
+        </form>
+        <div class="text-center mt-3">
+            <a href="{{ url_for('auth.forgot_password') }}" style="font-size:.85rem; color: var(--text-muted);">Resend OTP</a>
+        </div>
+    </div>
+</div>
+<script src="{{ url_for('static', filename='bootstrap/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>

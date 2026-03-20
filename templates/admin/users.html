@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}User Management — Yuvraj Library{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h2>User Management</h2>
+        <div class="page-subtitle">Only admin accounts can access this page</div>
+    </div>
+    <a href="{{ url_for('admin.add_user') }}" class="btn btn-primary">+ Add User</a>
+</div>
+
+<div class="table-wrap">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            <tr>
+                <td class="fw-semibold">
+                    {{ u['username'] }}
+                    {% if u['id'] == current_user_id %}
+                        <span class="badge bg-primary ms-1">You</span>
+                    {% endif %}
+                </td>
+                <td class="text-muted">{{ u['email'] }}</td>
+                <td>
+                    {% if u['role'] == 'admin' %}
+                        <span class="badge bg-danger">Admin</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Staff</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if u['is_active'] %}
+                        <span class="badge bg-success">Active</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Inactive</span>
+                    {% endif %}
+                </td>
+                <td class="text-muted">{{ u['created_at'] }}</td>
+                <td>
+                    {% if u['id'] != current_user_id %}
+                    <form method="post" action="{{ url_for('admin.toggle_user', id=u['id']) }}" class="d-inline">
+                        <button type="submit" class="btn btn-sm {% if u['is_active'] %}btn-outline-danger{% else %}btn-outline-success{% endif %}"
+                            onclick="return confirm('{% if u['is_active'] %}Deactivate{% else %}Activate{% endif %} this user?')">
+                            {% if u['is_active'] %}Deactivate{% else %}Activate{% endif %}
+                        </button>
+                    </form>
+                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1"
+                        data-bs-toggle="modal" data-bs-target="#resetModal{{ u['id'] }}">
+                        Reset Password
+                    </button>
+
+                    <!-- Reset password modal -->
+                    <div class="modal fade" id="resetModal{{ u['id'] }}" tabindex="-1">
+                        <div class="modal-dialog modal-sm">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" style="font-size:.95rem;">Reset: {{ u['username'] }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form method="post" action="{{ url_for('admin.reset_user_password', id=u['id']) }}">
+                                    <div class="modal-body">
+                                        <label class="form-label">New Password</label>
+                                        <input type="password" name="new_password" class="form-control" required minlength="6">
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="submit" class="btn btn-sm btn-primary">Set Password</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

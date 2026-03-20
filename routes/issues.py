@@ -2,6 +2,7 @@ from datetime import date, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from database import get_db
 import config
+from routes.auth import login_required
 
 bp = Blueprint("issues", __name__, url_prefix="/issues")
 
@@ -19,6 +20,7 @@ def get_available_copies(db, book_id):
 
 
 @bp.route("")
+@login_required
 def list_issues():
     db = get_db()
     issues = db.execute(
@@ -35,6 +37,7 @@ def list_issues():
 
 
 @bp.route("/overdue")
+@login_required
 def overdue_list():
     db = get_db()
     today_str = date.today().isoformat()
@@ -54,6 +57,7 @@ def overdue_list():
 
 
 @bp.route("/history")
+@login_required
 def history():
     db = get_db()
     q = request.args.get("q", "").strip()
@@ -80,6 +84,7 @@ def history():
 
 
 @bp.route("/new", methods=["GET", "POST"])
+@login_required
 def new_issue():
     db = get_db()
     if request.method == "POST":
@@ -150,6 +155,7 @@ def new_issue():
 
 
 @bp.route("/<int:id>/return", methods=["POST"])
+@login_required
 def return_book(id):
     db = get_db()
     issue = db.execute("SELECT * FROM issues WHERE id=?", (id,)).fetchone()
@@ -169,6 +175,7 @@ def return_book(id):
 
 
 @bp.route("/<int:id>/reissue", methods=["POST"])
+@login_required
 def reissue_book(id):
     db = get_db()
     issue = db.execute("SELECT * FROM issues WHERE id=?", (id,)).fetchone()

@@ -1,6 +1,7 @@
 from datetime import date
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from database import get_db
+from routes.auth import login_required
 
 bp = Blueprint("books", __name__, url_prefix="/books")
 
@@ -12,6 +13,7 @@ CATEGORIES = [
 ]
 
 @bp.route("")
+@login_required
 def list_books():
     db = get_db()
     q = request.args.get("q", "").strip()
@@ -40,6 +42,7 @@ def list_books():
     return render_template("books/list.html", books=books, q=q)
 
 @bp.route("/add", methods=["GET", "POST"])
+@login_required
 def add_book():
     if request.method == "POST":
         title = request.form.get("title", "").strip()
@@ -79,6 +82,7 @@ def add_book():
     return render_template("books/add.html", form={}, categories=CATEGORIES)
 
 @bp.route("/<int:id>")
+@login_required
 def view_book(id):
     db = get_db()
     book = db.execute(
@@ -103,6 +107,7 @@ def view_book(id):
     return render_template("books/view.html", book=book, current_holders=current_holders, today=date.today().isoformat())
 
 @bp.route("/<int:id>/edit", methods=["GET", "POST"])
+@login_required
 def edit_book(id):
     db = get_db()
     book = db.execute("SELECT * FROM books WHERE id=?", (id,)).fetchone()

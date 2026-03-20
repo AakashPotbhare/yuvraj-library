@@ -6,7 +6,7 @@
     <a href="{{ url_for('members.view_member', id=member['id']) }}" class="btn btn-outline-secondary">← Back</a>
 </div>
 <div class="form-card">
-<form method="post">
+<form method="post" enctype="multipart/form-data">
     <div class="mb-3">
         <label class="form-label">Full Name *</label>
         <div class="form-hint">सदस्य का नाम</div>
@@ -46,6 +46,17 @@
     <div class="mb-3">
         <label class="form-label">Notes (optional)</label>
         <textarea name="notes" class="form-control" rows="2">{{ form.get('notes', '') }}</textarea>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Government ID Document (optional)</label>
+        <div class="form-hint">सरकारी दस्तावेज़ — PDF, JPG or PNG, max 5 MB</div>
+        <input type="file" name="doc_file" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+        {% if member.get('doc_filename') %}
+        <div class="form-hint mt-1">
+            Current: <a href="{{ url_for('static', filename='uploads/member_docs/' + member['doc_filename']) }}" target="_blank">View existing document</a>
+            (upload a new file to replace it)
+        </div>
+        {% endif %}
     </div>
     <div class="mt-4 d-flex gap-2">
         <button type="submit" class="btn btn-primary">Update Member</button>

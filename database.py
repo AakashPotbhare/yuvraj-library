@@ -65,8 +65,27 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_books_title    ON books(title);
         CREATE INDEX IF NOT EXISTS idx_books_author   ON books(author);
         CREATE INDEX IF NOT EXISTS idx_issues_open    ON issues(returned_on) WHERE returned_on IS NULL;
+
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'staff',
+            is_active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL DEFAULT (date('now')),
+            reset_token TEXT,
+            reset_token_expiry TEXT
+        );
     """)
     db.commit()
+
+    # Migration: add doc_filename to members if not present
+    try:
+        db.execute("ALTER TABLE members ADD COLUMN doc_filename TEXT")
+        db.commit()
+    except Exception:
+        pass  # column already exists
 
 
 def init_app(app):
