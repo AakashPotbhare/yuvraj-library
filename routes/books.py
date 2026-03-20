@@ -1,3 +1,4 @@
+from datetime import date
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from database import get_db
 
@@ -61,6 +62,8 @@ def add_book():
             error = "Author is required."
         elif not category:
             error = "Category is required."
+        elif category not in CATEGORIES:
+            error = "Please select a valid category."
         if error:
             flash(error, "danger")
             return render_template("books/add.html", form=dict(request.form), categories=CATEGORIES)
@@ -97,7 +100,6 @@ def view_book(id):
            ORDER BY i.due_date ASC""",
         (id,)
     ).fetchall()
-    from datetime import date
     return render_template("books/view.html", book=book, current_holders=current_holders, today=date.today().isoformat())
 
 @bp.route("/<int:id>/edit", methods=["GET", "POST"])
@@ -128,6 +130,8 @@ def edit_book(id):
             error = "Author is required."
         elif not category:
             error = "Category is required."
+        elif category not in CATEGORIES:
+            error = "Please select a valid category."
         if error:
             flash(error, "danger")
             form_data = dict(request.form)
@@ -139,4 +143,5 @@ def edit_book(id):
         db.commit()
         flash("Book updated.", "success")
         return redirect(url_for("books.view_book", id=id))
-    return render_template("books/edit.html", book=book, form=dict(book), categories=CATEGORIES)
+    form_data = {k: ('' if v is None else v) for k, v in dict(book).items()}
+    return render_template("books/edit.html", book=book, form=form_data, categories=CATEGORIES)

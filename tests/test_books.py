@@ -21,7 +21,7 @@ def test_add_book_missing_title(client):
         "total_copies": "1",
     }, follow_redirects=True)
     assert r.status_code == 200
-    # Should re-render form with error, not redirect to book view
+    assert b"required" in r.data.lower() or b"title" in r.data.lower()
 
 def test_search_books_by_author(client):
     client.post("/books/add", data={
