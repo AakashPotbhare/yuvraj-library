@@ -1,23 +1,121 @@
+import os
 import sqlite3
 from flask import g, current_app
 
+_DATABASE_URL = os.environ.get("DATABASE_URL", "")
+_IS_PG = _DATABASE_URL.startswith(("postgresql://", "postgres://"))
 
-def get_db():
+
+class _Row(dict):
+    """Dict subclass that also supports attribute-style access."""
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return list(self.values())[key]
+        return super().__getitem__(key)
+
+    def get(self, key, default=None):
+        return super().get(key, default)
+
+    def keys(self):
+        return super().keys()
+
+
+class _Cursor:
+    """Normalises psycopg2 / sqlite3 cursor so routes see the same API."""
+
+    def __init__(self, raw, is_pg=False):
+        self._raw = raw
+        self._is_pg = is_pg
+
+    def fetchone(self):
+        row = self._raw.fetchone()
+        if row is None:
+            return None
+        if self._is_pg:
+            return _Row(row)
+        return row   # sqlite3.Row already supports dict-like access
+
+    def fetchall(self):
+        rows = self._raw.fetchall()
+        if self._is_pg:
+            return [_Row(r) for r in rows]
+        return rows
+
+    @property
+    def lastrowid(self):
+        if self._is_pg:
+            return self._raw.fetchone()["id"] if self._raw.rowcount > 0 else None
+        return self._raw.lastrowid
+
+
+class _DB:
+    """Unified database wrapper for both SQLite and PostgreSQL."""
+
+    def __init__(self, conn, is_pg=False):
+        self._conn = conn
+        self._is_pg = is_pg
+        if is_pg:
+            import psycopg2.extras
+            self._cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    def execute(self, sql, params=()):
+        if self._is_pg:
+            sql = sql.replace("?", "%s")
+            self._cur.execute(sql, params if params else None)
+            return _Cursor(self._cur, is_pg=True)
+        else:
+            raw = self._conn.execute(sql, params)
+            return _Cursor(raw, is_pg=False)
+
+    def executescript(self, script):
+        if self._is_pg:
+            self._cur.execute(script)
+        else:
+            self._conn.executescript(script)
+
+    def commit(self):
+        self._conn.commit()
+
+    def close(self):
+        self._conn.close()
+
+
+def get_db() -> _DB:
     if "db" not in g:
-        g.db = sqlite3.connect(current_app.config["DATABASE"])
-        g.db.row_factory = sqlite3.Row
-        g.db.execute("PRAGMA foreign_keys = ON")
+        if _IS_PG:
+            import psycopg2
+            conn = psycopg2.connect(_DATABASE_URL, connect_timeout=10)
+            g.db = _DB(conn, is_pg=True)
+        else:
+            conn = sqlite3.connect(current_app.config["DATABASE"])
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA foreign_keys = ON")
+            g.db = _DB(conn, is_pg=False)
     return g.db
 
 
 def close_db(e=None):
     db = g.pop("db", None)
     if db is not None:
+        try:
+            db.commit()
+        except Exception:
+            pass
         db.close()
 
 
 def init_db():
     db = get_db()
+    if _IS_PG:
+        # Schema already applied to Supabase via MCP migrations
+        # Just run the migration for doc_filename (no-op if exists)
+        try:
+            db.execute("ALTER TABLE members ADD COLUMN doc_filename TEXT")
+            db.commit()
+        except Exception:
+            db._conn.rollback()
+        return
+
     db.executescript("""
         CREATE TABLE IF NOT EXISTS members (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,6 +128,7 @@ def init_db():
             joined_on   DATE NOT NULL DEFAULT (date('now')),
             is_active   INTEGER NOT NULL DEFAULT 1,
             notes       TEXT,
+            doc_filename TEXT,
             created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -64,7 +163,6 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_members_phone  ON members(phone);
         CREATE INDEX IF NOT EXISTS idx_books_title    ON books(title);
         CREATE INDEX IF NOT EXISTS idx_books_author   ON books(author);
-        CREATE INDEX IF NOT EXISTS idx_issues_open    ON issues(returned_on) WHERE returned_on IS NULL;
 
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -79,13 +177,6 @@ def init_db():
         );
     """)
     db.commit()
-
-    # Migration: add doc_filename to members if not present
-    try:
-        db.execute("ALTER TABLE members ADD COLUMN doc_filename TEXT")
-        db.commit()
-    except Exception:
-        pass  # column already exists
 
 
 def init_app(app):

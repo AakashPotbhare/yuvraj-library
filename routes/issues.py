@@ -1,7 +1,6 @@
 from datetime import date, timedelta
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from database import get_db
-import config
 from routes.auth import login_required
 
 bp = Blueprint("issues", __name__, url_prefix="/issues")
@@ -40,20 +39,26 @@ def list_issues():
 @login_required
 def overdue_list():
     db = get_db()
-    today_str = date.today().isoformat()
-    issues = db.execute(
+    today = date.today().isoformat()
+    today_date = date.today()
+    raw_rows = db.execute(
         """SELECT i.*,
                   b.title, b.author, b.rack_location,
-                  m.name AS member_name, m.phone,
-                  CAST(julianday('now') - julianday(i.due_date) AS INTEGER) AS days_overdue
+                  m.name AS member_name, m.phone
            FROM issues i
            JOIN books b ON i.book_id = b.id
            JOIN members m ON i.member_id = m.id
            WHERE i.returned_on IS NULL AND i.due_date < ?
            ORDER BY i.due_date ASC""",
-        (today_str,)
+        (today,)
     ).fetchall()
-    return render_template("issues/overdue.html", issues=issues)
+    results = []
+    for row in raw_rows:
+        d = dict(row)
+        due = date.fromisoformat(str(d["due_date"])[:10])
+        d["days_overdue"] = (today_date - due).days
+        results.append(d)
+    return render_template("issues/overdue.html", issues=results)
 
 
 @bp.route("/history")
@@ -117,7 +122,7 @@ def new_issue():
 
         # Create the issue
         issued_on = date.today().isoformat()
-        due_date = (date.today() + timedelta(days=config.DEFAULT_LOAN_DAYS)).isoformat()
+        due_date = (date.today() + timedelta(days=current_app.config["DEFAULT_LOAN_DAYS"])).isoformat()
         db.execute(
             "INSERT INTO issues (book_id, member_id, issued_on, due_date) VALUES (?,?,?,?)",
             (book_id, member_id, issued_on, due_date)
@@ -150,7 +155,7 @@ def new_issue():
         members_found=members_found, books_found=books_found,
         selected_member_id=selected_member_id,
         selected_book_id=selected_book_id,
-        default_loan_days=config.DEFAULT_LOAN_DAYS
+        default_loan_days=current_app.config["DEFAULT_LOAN_DAYS"]
     )
 
 
@@ -185,15 +190,19 @@ def reissue_book(id):
     if issue["returned_on"] is not None:
         flash("Cannot reissue a returned book.", "warning")
         return redirect(url_for("issues.list_issues"))
+    issue_row = db.execute(
+        "SELECT due_date FROM issues WHERE id=? AND returned_on IS NULL", (id,)
+    ).fetchone()
+    if not issue_row:
+        flash("Issue record not found or already returned.", "danger")
+        return redirect(url_for("issues.list_issues"))
+    due_str = str(issue_row["due_date"])
+    current_due = date.fromisoformat(due_str[:10])
+    new_due = (current_due + timedelta(days=current_app.config["DEFAULT_LOAN_DAYS"])).isoformat()
     db.execute(
-        """UPDATE issues
-           SET due_date = date(due_date, '+' || ? || ' days'),
-               reissue_count = reissue_count + 1
-           WHERE id=? AND returned_on IS NULL""",
-        (config.DEFAULT_LOAN_DAYS, id)
+        "UPDATE issues SET due_date=?, reissue_count=reissue_count+1 WHERE id=? AND returned_on IS NULL",
+        (new_due, id)
     )
     db.commit()
-    # Fetch updated due date for message
-    updated = db.execute("SELECT due_date FROM issues WHERE id=?", (id,)).fetchone()
-    flash(f"Book reissued. New due date: {updated['due_date']}", "success")
+    flash(f"Book reissued. New due date: {new_due}", "success")
     return redirect(url_for("issues.list_issues"))

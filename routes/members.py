@@ -2,7 +2,7 @@ import os
 from datetime import date
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from werkzeug.utils import secure_filename
-from database import get_db
+from database import get_db, _IS_PG
 from routes.auth import login_required
 
 bp = Blueprint("members", __name__, url_prefix="/members")
@@ -13,6 +13,38 @@ MAX_DOC_SIZE = 5 * 1024 * 1024  # 5 MB
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def _save_document(file, member_id):
+    """Save document to Supabase Storage (cloud) or local filesystem (PC)."""
+    ext = file.filename.rsplit(".", 1)[1].lower()
+    safe_name = f"member_{member_id}_{secure_filename(file.filename)}"
+
+    if _IS_PG:
+        try:
+            from supabase import create_client
+            url = os.environ.get("SUPABASE_URL", "")
+            key = os.environ.get("SUPABASE_SERVICE_KEY", os.environ.get("SUPABASE_ANON_KEY", ""))
+            if url and key:
+                sb = create_client(url, key)
+                file_bytes = file.read()
+                sb.storage.from_("member-docs").upload(
+                    safe_name, file_bytes,
+                    {"content-type": f"image/{ext}" if ext != "pdf" else "application/pdf",
+                     "upsert": "true"}
+                )
+                return f"supabase:{safe_name}"
+        except Exception as e:
+            import logging
+            logging.warning(f"Supabase Storage upload failed: {e}")
+
+    # Local fallback
+    upload_dir = os.path.join(current_app.root_path, "static", "uploads", "member_docs")
+    os.makedirs(upload_dir, exist_ok=True)
+    path = os.path.join(upload_dir, safe_name)
+    file.seek(0)
+    file.save(path)
+    return safe_name
 
 
 @bp.route("")
@@ -55,6 +87,7 @@ def add_member():
             flash(error, "danger")
             return render_template("members/add.html", form=request.form)
 
+        db = get_db()
         doc_filename = None
         uploaded = request.files.get("doc_file")
         if uploaded and uploaded.filename:
@@ -65,14 +98,9 @@ def add_member():
                 flash("File too large. Maximum size is 5 MB.", "danger")
                 return render_template("members/add.html", form=request.form)
             uploaded.seek(0)
-            db = get_db()
-            ext = uploaded.filename.rsplit(".", 1)[1].lower()
-            safe_name = f"member_{db.execute('SELECT COUNT(*) FROM members').fetchone()[0]+1}_{secure_filename(uploaded.filename)}"
-            upload_path = os.path.join(current_app.root_path, "static", "uploads", "member_docs", safe_name)
-            uploaded.save(upload_path)
-            doc_filename = safe_name
+            # Use a placeholder ID (0) for the filename; will be replaced below with real ID
+            doc_filename = _save_document(uploaded, "new")
 
-        db = get_db()
         cursor = db.execute(
             "INSERT INTO members (name, phone, address, id_type, id_number, member_type, doc_filename) VALUES (?,?,?,?,?,?,?)",
             (name, phone, address, id_type, id_number, member_type, doc_filename)
@@ -99,11 +127,21 @@ def view_member(id):
            ORDER BY i.due_date ASC""",
         (id,)
     ).fetchall()
+
+    doc_filename = member["doc_filename"] or ""
+    if doc_filename.startswith("supabase:"):
+        key = doc_filename[len("supabase:"):]
+        supabase_url = current_app.config.get("SUPABASE_URL", "")
+        doc_url = f"{supabase_url}/storage/v1/object/public/member-docs/{key}"
+    else:
+        doc_url = url_for("static", filename=f"uploads/member_docs/{doc_filename}") if doc_filename else None
+
     return render_template(
         "members/view.html",
         member=member,
         open_issues=open_issues,
-        today=date.today().isoformat()
+        today=date.today().isoformat(),
+        doc_url=doc_url
     )
 
 
@@ -145,10 +183,7 @@ def edit_member(id):
                 flash("File too large. Maximum size is 5 MB.", "danger")
                 return render_template("members/edit.html", member=member, form=dict(request.form))
             uploaded.seek(0)
-            safe_name = f"member_{id}_{secure_filename(uploaded.filename)}"
-            upload_path = os.path.join(current_app.root_path, "static", "uploads", "member_docs", safe_name)
-            uploaded.save(upload_path)
-            doc_filename = safe_name
+            doc_filename = _save_document(uploaded, id)
 
         db.execute(
             "UPDATE members SET name=?, phone=?, address=?, id_type=?, id_number=?, member_type=?, doc_filename=? WHERE id=?",

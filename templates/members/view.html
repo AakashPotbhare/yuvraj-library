@@ -55,11 +55,11 @@
                     <div class="detail-value text-muted">{{ member['notes'] }}</div>
                 </div>
                 {% endif %}
-                {% if member['doc_filename'] %}
+                {% if doc_url %}
                 <div class="detail-row" style="border-bottom:none;">
                     <div class="detail-label">Document</div>
                     <div class="detail-value">
-                        <a href="{{ url_for('static', filename='uploads/member_docs/' + member['doc_filename']) }}"
+                        <a href="{{ doc_url }}"
                            target="_blank" class="btn btn-sm btn-outline-primary">📄 View Document</a>
                     </div>
                 </div>
