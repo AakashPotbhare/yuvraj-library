@@ -1,9 +1,14 @@
 import os
+import re
 import sqlite3
 from flask import g, current_app
 
 _DATABASE_URL = os.environ.get("DATABASE_URL", "")
 _IS_PG = _DATABASE_URL.startswith(("postgresql://", "postgres://"))
+_SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+_SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+# Use HTTPS RPC when Supabase creds are present (avoids IPv6-only direct connection)
+_USE_RPC = bool(_IS_PG and _SUPABASE_URL and _SUPABASE_KEY)
 
 
 class _Row(dict):
@@ -19,6 +24,8 @@ class _Row(dict):
     def keys(self):
         return super().keys()
 
+
+# ── psycopg2 / SQLite cursor wrapper ──────────────────────────────────────────
 
 class _Cursor:
     """Normalises psycopg2 / sqlite3 cursor so routes see the same API."""
@@ -49,7 +56,7 @@ class _Cursor:
 
 
 class _DB:
-    """Unified database wrapper for both SQLite and PostgreSQL."""
+    """Unified database wrapper for both SQLite and PostgreSQL (psycopg2)."""
 
     def __init__(self, conn, is_pg=False):
         self._conn = conn
@@ -80,61 +87,137 @@ class _DB:
         self._conn.close()
 
 
-def _parse_pg_url(url):
-    """Parse a PostgreSQL URL robustly, handling @ in passwords.
+# ── Supabase RPC (HTTPS) wrapper ───────────────────────────────────────────────
 
-    Standard urlparse fails when the password contains an unencoded '@'.
-    We find the LAST '@' before the host to correctly split credentials.
+class _RpcCursor:
+    """Cursor-like object backed by the JSON result of run_query()."""
+
+    def __init__(self, data):
+        self._rows = []
+        self._lastrowid = None
+        if isinstance(data, list):
+            self._rows = [_Row(r) if isinstance(r, dict) else r for r in data]
+        elif isinstance(data, dict):
+            if "lastrowid" in data:
+                self._lastrowid = data["lastrowid"]
+            # rowcount / ok results have no rows
+
+    def fetchone(self):
+        return self._rows[0] if self._rows else None
+
+    def fetchall(self):
+        return self._rows
+
+    @property
+    def lastrowid(self):
+        return self._lastrowid
+
+
+class _NoopConn:
+    """Stub connection used so init_db() can call db._conn.rollback() safely."""
+    def rollback(self): pass
+
+
+class _SupabaseRPC:
+    """Database interface that executes SQL via Supabase's run_query() RPC over HTTPS.
+
+    This avoids the need for a direct TCP connection to the PostgreSQL database,
+    which is problematic on Vercel serverless (IPv6-only Supabase direct host,
+    connection pooler not yet provisioned for new projects).
     """
+
+    def __init__(self, url, key):
+        self._rpc_url = url.rstrip("/") + "/rest/v1/rpc/run_query"
+        self._headers = {
+            "apikey": key,
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json",
+        }
+        self._conn = _NoopConn()  # for init_db()'s db._conn.rollback() calls
+
+    def execute(self, sql, params=()):
+        import json as _json
+        import urllib.request
+        import urllib.error
+
+        # Skip SQLite-specific statements that don't apply on PostgreSQL
+        sql_stripped = sql.strip()
+        if sql_stripped.upper().startswith("PRAGMA"):
+            return _RpcCursor([])
+
+        # Convert ? placeholders to $1, $2, ...
+        count = [0]
+        def _replace(_m):
+            count[0] += 1
+            return f"${count[0]}"
+        pg_sql = re.sub(r"\?", _replace, sql_stripped)
+
+        payload = _json.dumps({
+            "q": pg_sql,
+            "p": [str(v) if v is not None else None for v in params],
+        }).encode("utf-8")
+
+        req = urllib.request.Request(
+            self._rpc_url, data=payload, headers=self._headers, method="POST"
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                result = _json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"DB RPC error {e.code}: {body}")
+
+        return _RpcCursor(result)
+
+    def executescript(self, script):
+        pass  # Schema is managed via Supabase MCP migrations
+
+    def commit(self):
+        pass  # Auto-committed via REST API
+
+    def close(self):
+        pass
+
+
+# ── URL parser for psycopg2 fallback ──────────────────────────────────────────
+
+def _parse_pg_url(url):
+    """Parse a PostgreSQL URL robustly, handling @ in passwords."""
     from urllib.parse import unquote
-    # Strip scheme
     rest = url.split("://", 1)[1]
-    # Split off query string
     rest, _, query = rest.partition("?")
-    # Split off path (dbname)
     if "/" in rest:
         rest, _, dbname = rest.partition("/")
     else:
         dbname = "postgres"
-    # Split credentials from host using LAST '@'
     at = rest.rfind("@")
     if at != -1:
         credentials, host_port = rest[:at], rest[at + 1:]
     else:
         credentials, host_port = "", rest
-    # Parse host:port
     if ":" in host_port:
         host, port_str = host_port.rsplit(":", 1)
         port = int(port_str) if port_str.isdigit() else 5432
     else:
         host, port = host_port, 5432
-    # Parse user:password (split on FIRST ':' only)
     colon = credentials.find(":")
     if colon != -1:
         user = unquote(credentials[:colon])
         password = unquote(credentials[colon + 1:])
     else:
         user, password = unquote(credentials), ""
-    # Supabase direct-connection hosts (db.<ref>.supabase.co) resolve to IPv6
-    # which Vercel serverless cannot reach.  Rewrite to the IPv4 pooler
-    # (session mode, port 5432) automatically so users don't need to change
-    # their DATABASE_URL.
-    import re
+    # Rewrite Supabase direct host (IPv6-only) to pooler (IPv4)
     direct_match = re.match(r"db\.([^.]+)\.supabase\.co", host)
     if direct_match:
         project_ref = direct_match.group(1)
-        # Pooler host is region-specific; fall back to ap-south-1 if unknown
         region = os.environ.get("SUPABASE_REGION", "ap-south-1")
         host = f"aws-0-{region}.pooler.supabase.com"
         port = 5432
-        # Pooler requires username format postgres.<project_ref>
         if "." not in user:
             user = f"{user}.{project_ref}"
-
     params = {"host": host, "port": port, "user": user, "password": password,
               "dbname": dbname or "postgres", "sslmode": "require",
               "connect_timeout": 10}
-    # Merge any extra query params (e.g. pgbouncer=true)
     if query:
         for part in query.split("&"):
             k, _, v = part.partition("=")
@@ -143,14 +226,16 @@ def _parse_pg_url(url):
     return params
 
 
-def get_db() -> _DB:
+# ── Public API ─────────────────────────────────────────────────────────────────
+
+def get_db():
     if "db" not in g:
-        if _IS_PG:
-            import psycopg2, logging
-            params = _parse_pg_url(_DATABASE_URL)
-            safe = {k: v for k, v in params.items() if k != "password"}
-            logging.warning(f"PG connect params (no password): {safe}")
-            conn = psycopg2.connect(**params)
+        if _USE_RPC:
+            # Supabase HTTPS RPC — works on Vercel serverless without TCP
+            g.db = _SupabaseRPC(_SUPABASE_URL, _SUPABASE_KEY)
+        elif _IS_PG:
+            import psycopg2
+            conn = psycopg2.connect(**_parse_pg_url(_DATABASE_URL))
             g.db = _DB(conn, is_pg=True)
         else:
             conn = sqlite3.connect(current_app.config["DATABASE"])
@@ -173,8 +258,8 @@ def close_db(e=None):
 def init_db():
     db = get_db()
     if _IS_PG:
-        # Schema already applied to Supabase via MCP migrations
-        # Run incremental migrations (no-op if columns already exist)
+        # Schema already applied to Supabase via MCP migrations.
+        # Run incremental migrations — silently skip if columns already exist.
         for sql in [
             "ALTER TABLE members ADD COLUMN doc_filename TEXT",
             "ALTER TABLE members ADD COLUMN member_code TEXT UNIQUE",
@@ -255,7 +340,7 @@ def init_db():
     """)
     db.commit()
 
-    # Incremental migrations — add new columns to existing databases (no-op if already present)
+    # Incremental migrations for existing SQLite databases
     existing_member_cols = [row[1] for row in db.execute("PRAGMA table_info(members)").fetchall()]
     existing_book_cols = [row[1] for row in db.execute("PRAGMA table_info(books)").fetchall()]
     if "member_code" not in existing_member_cols:
@@ -264,7 +349,6 @@ def init_db():
     if "book_code" not in existing_book_cols:
         db.execute("ALTER TABLE books ADD COLUMN book_code TEXT")
         db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_book_code ON books(book_code)")
-    # Backfill codes for existing rows that don't have one yet
     db.execute("UPDATE members SET member_code = 'MEM-' || printf('%04d', id) WHERE member_code IS NULL")
     db.execute("UPDATE books SET book_code = 'BOOK-' || printf('%04d', id) WHERE book_code IS NULL")
     db.commit()
